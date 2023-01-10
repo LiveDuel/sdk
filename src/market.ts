@@ -1,7 +1,7 @@
-import { ethers, BigNumber, BigNumberish, Signer, utils } from "ethers";
+import { ethers, BigNumberish, Signer, utils } from "ethers";
 import { ConditionalTokensRepo } from "./conditionalTokens";
 import { ERC20__factory } from "./contracts";
-import { MarketMakerRepo, MarketMakerFactoryRepo } from "./lmsr";
+import { MarketMakerRepo, MarketMakerFactoryRepo } from "./fpmm";
 import { Outcome } from "./utils";
 
 export interface MarketInterface {

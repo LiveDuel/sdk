@@ -13,7 +13,7 @@ exports.MarketAdmin = exports.Market = void 0;
 const ethers_1 = require("ethers");
 const conditionalTokens_1 = require("./conditionalTokens");
 const contracts_1 = require("./contracts");
-const lmsr_1 = require("./lmsr");
+const fpmm_1 = require("./fpmm");
 class Market {
     constructor(signer, oracle, collateralAddress, conditionId, questionId, outcomes, fee, marketMaker) {
         this._signer = signer;
@@ -122,7 +122,7 @@ class Market {
      */
     static initialize(signer, marketMakerAddress, conditionalTokensAddress, collateralAddress, oracle, conditionId, questionId, outcomes, fee) {
         return __awaiter(this, void 0, void 0, function* () {
-            const lmsrMarketMaker = yield lmsr_1.MarketMakerRepo.initialize(signer, marketMakerAddress, conditionalTokensAddress, collateralAddress);
+            const lmsrMarketMaker = yield fpmm_1.MarketMakerRepo.initialize(signer, marketMakerAddress, conditionalTokensAddress, collateralAddress);
             return new Market(signer, oracle, collateralAddress, conditionId, questionId, outcomes, fee, lmsrMarketMaker);
         });
     }
@@ -153,7 +153,7 @@ class MarketAdmin {
             try {
                 // init
                 const ctRepo = new conditionalTokens_1.ConditionalTokensRepo(signer, conditionalTokensAddress);
-                const lmsrmmFactoryRepo = new lmsr_1.MarketMakerFactoryRepo(signer, marketMakerFactoryAddress);
+                const lmsrmmFactoryRepo = new fpmm_1.MarketMakerFactoryRepo(signer, marketMakerFactoryAddress);
                 // approve collateral to be funded to LMSR
                 const collateral = contracts_1.ERC20__factory.connect(collateralAddress, signer);
                 let trx = yield collateral.approve(marketMakerFactoryAddress, funding);
