@@ -85,6 +85,12 @@ export class Market implements MarketInterface {
         this.fee = fee;
     }
 
+    getCurrentOdds = async (): Promise<number[]> => {};
+
+    getPoolTokenBalances = async (): Promise<number[]> => {};
+
+    getUserTokenBalances = async (): Promise<number[]> => {};
+
     //[LEM] slippage not considered
     //[LEM] ensure approvals
     buy = async (
@@ -230,7 +236,7 @@ export class MarketAdmin {
             const fpmmFactoryRepo = new MarketMakerFactoryRepo(signer, marketMakerFactoryAddress);
 
             // `prepareCondition` & set up `FixedProductMarketMaker`
-            const conditionId = await ctRepo.createCondition(oracle, questionId, outcomes);
+            const conditionId = await ctRepo.createCondition(oracle, questionId, outcomes.length);
             const fpmmAddress = await fpmmFactoryRepo.createFPMarketMaker(
                 collateralAddress,
                 conditionalTokensAddress,

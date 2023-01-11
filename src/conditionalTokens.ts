@@ -5,7 +5,7 @@ import { Outcome } from "./utils";
 export interface ConditionalTokensRepoInterface {
     readonly address: string;
 
-    createCondition: (oracle: string, questionId: string, outcomes: Outcome[]) => Promise<string>;
+    createCondition: (oracle: string, questionId: string, numOutcomes: number) => Promise<string>;
 
     checkConditionExists: (conditionId: string) => Promise<boolean>;
 
@@ -38,10 +38,10 @@ export class ConditionalTokensRepo implements ConditionalTokensRepoInterface {
     createCondition = async (
         oracle: string,
         questionId: string,
-        outcomes: Outcome[]
+        numOutcomes: number
     ): Promise<string> => {
         let { events } = await this._contract
-            .prepareCondition(oracle, questionId, outcomes.length, {
+            .prepareCondition(oracle, questionId, numOutcomes, {
                 gasLimit: BigNumber.from(1e6), //[LEM] gasLimit
             })
             .then((transaction) => transaction.wait(1));
