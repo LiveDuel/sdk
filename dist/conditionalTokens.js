@@ -18,9 +18,9 @@ class ConditionalTokensRepo {
         return this._contract.address;
     }
     constructor(signer, conditionalTokensAddress) {
-        this.createCondition = (oracle, questionId, outcomes) => __awaiter(this, void 0, void 0, function* () {
+        this.createCondition = (oracle, questionId, numOutcomes) => __awaiter(this, void 0, void 0, function* () {
             let { events } = yield this._contract
-                .prepareCondition(oracle, questionId, outcomes.length, {
+                .prepareCondition(oracle, questionId, numOutcomes, {
                 gasLimit: ethers_1.BigNumber.from(1e6), //[LEM] gasLimit
             })
                 .then((transaction) => transaction.wait(1));
@@ -47,6 +47,13 @@ class ConditionalTokensRepo {
             return this._contract.setApprovalForAll(operatorAddress, approved, {
                 gasLimit: ethers_1.ethers.BigNumber.from(1e6), //[LEM] gasLimit
             });
+        });
+        this.getPositionId = (collateralAddress, conditionId, outcomeIndex) => __awaiter(this, void 0, void 0, function* () {
+            const INDEX_SETS = [1, 2, 4];
+            const PARENT_COLLECTION_ID = "0x" + "0".repeat(64);
+            const collectionId = yield this._contract.getCollectionId(PARENT_COLLECTION_ID, conditionId, INDEX_SETS[outcomeIndex]);
+            const positionId = yield this._contract.getPositionId(collateralAddress, collectionId);
+            return positionId.toString();
         });
         this._contract = contracts_1.ConditionalTokens__factory.connect(conditionalTokensAddress, signer);
         if (!this._contract.address) {

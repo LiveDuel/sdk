@@ -15,19 +15,40 @@ const conditionalTokens_1 = require("./conditionalTokens");
 const fpmm_1 = require("./fpmm");
 class Market {
     constructor(signer, oracle, collateralAddress, conditionId, questionId, outcomes, fee, marketMaker) {
-        this._signer = signer;
-        this._oracle = oracle;
-        this._marketMaker = marketMaker;
-        this.collateralAddress = collateralAddress;
-        this.conditionId = conditionId;
-        this.questionId = questionId;
-        this.outcomes = outcomes;
-        this.fee = fee;
-    }
-    //[LEM] slippage not considered
-    //[LEM] ensure approvals
-    buy(amountInvest, outcomeIndex, slippage) {
-        return __awaiter(this, void 0, void 0, function* () {
+        this.getUserTokenBalances = () => __awaiter(this, void 0, void 0, function* () {
+            const account = yield this._signer.getAddress();
+            const balances = [];
+            for (const outcome of this.outcomes) {
+                let bal = yield this._marketMaker.getConditionalTokenBalance(account, outcome.positionId);
+                balances.push(bal);
+            }
+            return balances;
+        });
+        this.getPoolTokenBalances = () => __awaiter(this, void 0, void 0, function* () {
+            const balances = [];
+            for (const outcome of this.outcomes) {
+                let bal = yield this._marketMaker.getConditionalTokenBalance(this._marketMaker.contractAddress, outcome.positionId);
+                balances.push(bal);
+            }
+            return balances;
+        });
+        this.getCurrentOdds = () => __awaiter(this, void 0, void 0, function* () {
+            const balancesRaw = yield this.getPoolTokenBalances();
+            const balances = balancesRaw.map((i) => ethers_1.utils.formatEther(i));
+            const oddsWeight = [];
+            for (let i = 0; i < balances.length; i++) {
+                const bf = balances.filter((item, index) => index != i);
+                const bm = bf.map((item) => Number(item));
+                const br = bm.reduce((acc = 1, item) => (acc *= item));
+                oddsWeight.push(br);
+            }
+            const oddsWeightSum = oddsWeight.reduce((acc = 0, item) => (acc += item));
+            const odds = oddsWeight.map((item) => item / oddsWeightSum);
+            return odds;
+        });
+        //[LEM] slippage not considered
+        //[LEM] ensure approvals
+        this.buy = (amountInvest, outcomeIndex, slippage) => __awaiter(this, void 0, void 0, function* () {
             try {
                 //[LEM] Temp
                 const MINTOKENS = "1";
@@ -47,9 +68,7 @@ class Market {
                 throw error;
             }
         });
-    }
-    sell(amountReturn, outcomeIndex, slippage) {
-        return __awaiter(this, void 0, void 0, function* () {
+        this.sell = (amountReturn, outcomeIndex, slippage) => __awaiter(this, void 0, void 0, function* () {
             try {
                 //[LEM] Temp
                 const MAXTOKENS = "1" + "0".repeat(22);
@@ -72,6 +91,14 @@ class Market {
                 throw error;
             }
         });
+        this._signer = signer;
+        this._oracle = oracle;
+        this._marketMaker = marketMaker;
+        this.collateralAddress = collateralAddress;
+        this.conditionId = conditionId;
+        this.questionId = questionId;
+        this.outcomes = outcomes;
+        this.fee = fee;
     }
     /**
      * Safely initializes the Market class instance to be used by clients/traders.
@@ -98,7 +125,7 @@ class MarketAdmin {
     //pause
     //resume
     //resolve-reportPayouts
-    //withdrawFee //close
+    //withdrawFee
     /**
      * Creates a market and a market maker for the specified market details.
      * @param signer Signer to use to deploy market
@@ -120,9 +147,9 @@ class MarketAdmin {
                 const ctRepo = new conditionalTokens_1.ConditionalTokensRepo(signer, conditionalTokensAddress);
                 const fpmmFactoryRepo = new fpmm_1.MarketMakerFactoryRepo(signer, marketMakerFactoryAddress);
                 // `prepareCondition` & set up `FixedProductMarketMaker`
-                const conditionId = yield ctRepo.createCondition(oracle, questionId, outcomes);
+                const conditionId = yield ctRepo.createCondition(oracle, questionId, outcomes.length);
                 const fpmmAddress = yield fpmmFactoryRepo.createFPMarketMaker(collateralAddress, conditionalTokensAddress, conditionId, fee);
-                // // approve collateral and fund FixedProductMarketMaker
+                // approve collateral and fund FixedProductMarketMaker
                 const fpmmRepo = yield fpmm_1.MarketMakerRepo.initialize(signer, fpmmAddress, conditionalTokensAddress, collateralAddress);
                 let trx1 = yield fpmmRepo.setCollateralApproval(funding);
                 yield trx1.wait();
