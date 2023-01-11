@@ -289,7 +289,7 @@ export class MarketAdmin {
                 conditionalTokensAddress,
                 collateralAddress
             );
-            let trx2 = await fpmmRepo.addLiquidityInitial(funding, initialOdds, account);
+            let trx2 = await fpmmRepo.addLiquidityInitial(funding, initialOdds);
             await trx2.wait();
 
             console.log("[INFO] Market Creator Address: ", account);

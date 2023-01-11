@@ -77,30 +77,26 @@ export interface MarketMakerRepoInterface {
 
     getCollateralApproval: (account: string) => Promise<BigNumber>;
 
-    setCollateralApproval: (amount: BigNumberish, from: string) => Promise<ContractTransaction>;
+    setCollateralApproval: (amount: BigNumberish) => Promise<ContractTransaction>;
 
     getLPTokenBalance: (account: string) => Promise<BigNumber>;
 
     getLPTokenApproval: (account: string) => Promise<BigNumber>;
 
-    setLPTokenApproval: (amount: BigNumberish, from: string) => Promise<ethers.ContractTransaction>;
+    setLPTokenApproval: (amount: BigNumberish) => Promise<ethers.ContractTransaction>;
 
     getConditionalTokenBalance: (account: string, positionId: string) => Promise<BigNumber>;
 
     getConditionalTokenApproval: (account: string) => Promise<boolean>;
 
-    setConditionalTokenApproval: (approved: boolean, from: string) => Promise<ContractTransaction>;
+    setConditionalTokenApproval: (approved: boolean) => Promise<ContractTransaction>;
 
     /* MARKET METHODS */
-    addLiquidityInitial: (
-        amount: BigNumberish,
-        initialOdds: number[],
-        from: string
-    ) => Promise<ContractTransaction>;
+    addLiquidityInitial: (amount: BigNumberish, initialOdds: number[]) => Promise<ContractTransaction>;
 
-    // addLiquidity: (amount: BigNumberish, from: string) => Promise<ContractTransaction>;
+    // addLiquidity: (amount: BigNumberish) => Promise<ContractTransaction>;
 
-    // removeLiquidity: (amountLP: BigNumberish, from: string) => Promise<ContractTransaction>;
+    // removeLiquidity: (amountLP: BigNumberish) => Promise<ContractTransaction>;
 
     //[LEM] convert to local calculation
     calcBuyTokens: (amountInvest: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
@@ -114,21 +110,19 @@ export interface MarketMakerRepoInterface {
     buy: (
         amountInvest: BigNumberish,
         outcomeIndex: number,
-        minOutcomeTokensToBuy: BigNumberish,
-        from: string
+        minOutcomeTokensToBuy: BigNumberish
     ) => Promise<ContractTransaction>;
 
     sell: (
         amountReturn: BigNumberish,
         outcomeIndex: number,
-        maxOutcomeTokensToSell: BigNumberish,
-        from: string
+        maxOutcomeTokensToSell: BigNumberish
     ) => Promise<ContractTransaction>;
 
     /* FEE METHODS */
     // getWithdrawableFeeAmount: (account: string) => Promise<BigNumber>;
 
-    // withdrawFeeAmount: (from: string) => Promise<ContractTransaction>;
+    // withdrawFeeAmount: () => Promise<ContractTransaction>;
 }
 
 export class MarketMakerRepo implements MarketMakerRepoInterface {
@@ -177,12 +171,8 @@ export class MarketMakerRepo implements MarketMakerRepoInterface {
         return this._collateral.allowance(account, this.contractAddress);
     };
 
-    setCollateralApproval = async (
-        amount: BigNumberish,
-        from: string
-    ): Promise<ethers.ContractTransaction> => {
+    setCollateralApproval = async (amount: BigNumberish): Promise<ethers.ContractTransaction> => {
         return this._collateral.approve(this.contractAddress, amount, {
-            from,
             gasLimit: ethers.BigNumber.from(1e6), //[LEM] gasLimit
         });
     };
@@ -195,12 +185,8 @@ export class MarketMakerRepo implements MarketMakerRepoInterface {
         return this._contract.allowance(account, this.contractAddress);
     };
 
-    setLPTokenApproval = async (
-        amount: BigNumberish,
-        from: string
-    ): Promise<ethers.ContractTransaction> => {
+    setLPTokenApproval = async (amount: BigNumberish): Promise<ethers.ContractTransaction> => {
         return this._contract.approve(this.contractAddress, amount, {
-            from,
             gasLimit: ethers.BigNumber.from(1e6), //[LEM] gasLimit
         });
     };
@@ -213,22 +199,18 @@ export class MarketMakerRepo implements MarketMakerRepoInterface {
         return this._conditionalTokens.getApprovalForAll(account, this.contractAddress);
     };
 
-    setConditionalTokenApproval = async (
-        approved: boolean,
-        from: string
-    ): Promise<ethers.ContractTransaction> => {
-        return this._conditionalTokens.setApprovalForAll(this.contractAddress, approved, from);
+    setConditionalTokenApproval = async (approved: boolean): Promise<ethers.ContractTransaction> => {
+        return this._conditionalTokens.setApprovalForAll(this.contractAddress, approved);
     };
 
     /* MARKET METHODS */
     addLiquidityInitial = async (
         amount: BigNumberish,
-        initialOdds: number[],
-        from: string
+        initialOdds: number[]
     ): Promise<ContractTransaction> => {
-        //[LEM] calculate distHint from odds
+        //[LEM] calculate distHint using odds
         const distHint = initialOdds;
-        return this._contract.addFunding(amount, distHint, { from });
+        return this._contract.addFunding(amount, distHint);
     };
 
     calcBuyTokens = async (amountInvest: BigNumberish, outcomeIndex: number): Promise<BigNumber> => {
@@ -242,19 +224,17 @@ export class MarketMakerRepo implements MarketMakerRepoInterface {
     buy = async (
         amountInvest: BigNumberish,
         outcomeIndex: number,
-        minOutcomeTokensToBuy: BigNumberish,
-        from: string
+        minOutcomeTokensToBuy: BigNumberish
     ): Promise<ContractTransaction> => {
-        return this._contract.buy(amountInvest, outcomeIndex, minOutcomeTokensToBuy, { from });
+        return this._contract.buy(amountInvest, outcomeIndex, minOutcomeTokensToBuy);
     };
 
     sell = async (
         amountReturn: BigNumberish,
         outcomeIndex: number,
-        maxOutcomeTokensToSell: BigNumberish,
-        from: string
+        maxOutcomeTokensToSell: BigNumberish
     ): Promise<ContractTransaction> => {
-        return this._contract.sell(amountReturn, outcomeIndex, maxOutcomeTokensToSell, { from });
+        return this._contract.sell(amountReturn, outcomeIndex, maxOutcomeTokensToSell);
     };
 
     /* FEE METHODS */

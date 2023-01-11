@@ -15,8 +15,7 @@ export interface ConditionalTokensRepoInterface {
 
     setApprovalForAll: (
         operatorAddress: string,
-        approved: boolean,
-        from: string
+        approved: boolean
     ) => Promise<ethers.ContractTransaction>;
 }
 
@@ -72,11 +71,9 @@ export class ConditionalTokensRepo implements ConditionalTokensRepoInterface {
 
     setApprovalForAll = async (
         operatorAddress: string,
-        approved: boolean,
-        from: string
+        approved: boolean
     ): Promise<ethers.ContractTransaction> => {
         return this._contract.setApprovalForAll(operatorAddress, approved, {
-            from,
             gasLimit: ethers.BigNumber.from(1e6), //[LEM] gasLimit
         });
     };
