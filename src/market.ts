@@ -234,8 +234,6 @@ export class MarketAdmin {
     //resume
     //resolve-reportPayouts
     //withdrawFee //close
-    //changeFee
-    //changeFunding
 
     /**
      * Creates a market and a market maker for the specified market details.
@@ -265,7 +263,6 @@ export class MarketAdmin {
     ): Promise<[string, string]> {
         try {
             // init
-            const account = await signer.getAddress();
             const ctRepo = new ConditionalTokensRepo(signer, conditionalTokensAddress);
             const fpmmFactoryRepo = new MarketMakerFactoryRepo(signer, marketMakerFactoryAddress);
 
@@ -278,20 +275,19 @@ export class MarketAdmin {
                 fee
             );
 
-            // approve collateral to be funded to LMSR
-            const collateral = ERC20__factory.connect(collateralAddress, signer);
-            let trx1 = await collateral.approve(fpmmAddress, funding, { from: account });
-            await trx1.wait();
-
+            // // approve collateral and fund FixedProductMarketMaker
             const fpmmRepo = await MarketMakerRepo.initialize(
                 signer,
                 fpmmAddress,
                 conditionalTokensAddress,
                 collateralAddress
             );
+            let trx1 = await fpmmRepo.setCollateralApproval(funding);
+            await trx1.wait();
             let trx2 = await fpmmRepo.addLiquidityInitial(funding, initialOdds);
             await trx2.wait();
 
+            const account = await signer.getAddress();
             console.log("[INFO] Market Creator Address: ", account);
             console.log("[INFO] Created Condition ID:   ", conditionId);
             console.log("[INFO] FPMarketMaker Address:  ", fpmmAddress);
