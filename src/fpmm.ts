@@ -93,9 +93,13 @@ export interface MarketMakerRepoInterface {
 
     /* MARKET METHODS */
     //[LEM] convert to local calculation
-    calcBuyAmount: (amountInvest: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
+    calcBuyTokens: (amountInvest: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
 
-    calcSellAmount: (amountReturn: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
+    calcSellTokens: (amountReturn: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
+
+    // calcBuyAmount: (tokenAmountBuy: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
+
+    // calcSellAmount: (tokenAmountSell: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
 
     buy: (
         amountInvest: BigNumberish,
@@ -111,14 +115,14 @@ export interface MarketMakerRepoInterface {
         from: string
     ) => Promise<ContractTransaction>;
 
-    addLiquidity: (amount: BigNumberish, from: string) => Promise<ContractTransaction>;
+    // addLiquidity: (amount: BigNumberish, from: string) => Promise<ContractTransaction>;
 
-    removeLiquidity: (amountLP: BigNumberish, from: string) => Promise<ContractTransaction>;
+    // removeLiquidity: (amountLP: BigNumberish, from: string) => Promise<ContractTransaction>;
 
     /* FEE METHODS */
-    getWithdrawableFeeAmount: (account: string) => Promise<BigNumber>;
+    // getWithdrawableFeeAmount: (account: string) => Promise<BigNumber>;
 
-    withdrawFeeAmount: (from: string) => Promise<ContractTransaction>;
+    // withdrawFeeAmount: (from: string) => Promise<ContractTransaction>;
 }
 
 export class MarketMakerRepo implements MarketMakerRepoInterface {
@@ -211,6 +215,32 @@ export class MarketMakerRepo implements MarketMakerRepoInterface {
     };
 
     /* MARKET METHODS */
+    calcBuyTokens = async (amountInvest: BigNumberish, outcomeIndex: number): Promise<BigNumber> => {
+        return this._contract.calcBuyAmount(amountInvest, outcomeIndex);
+    };
+
+    calcSellTokens = async (amountReturn: BigNumberish, outcomeIndex: number): Promise<BigNumber> => {
+        return this._contract.calcSellAmount(amountReturn, outcomeIndex);
+    };
+
+    buy = async (
+        amountInvest: BigNumberish,
+        outcomeIndex: number,
+        minOutcomeTokensToBuy: BigNumberish,
+        from: string
+    ): Promise<ContractTransaction> => {
+        return this._contract.buy(amountInvest, outcomeIndex, minOutcomeTokensToBuy, { from });
+    };
+
+    sell = async (
+        amountReturn: BigNumberish,
+        outcomeIndex: number,
+        maxOutcomeTokensToSell: BigNumberish,
+        from: string
+    ): Promise<ContractTransaction> => {
+        return this._contract.sell(amountReturn, outcomeIndex, maxOutcomeTokensToSell, { from });
+    };
+
     /* FEE METHODS */
 
     /**
