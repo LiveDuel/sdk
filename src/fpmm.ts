@@ -171,7 +171,7 @@ export class MarketMakerRepo implements MarketMakerRepoInterface {
         return this._collateral.allowance(account, this.contractAddress);
     };
 
-    setCollateralApproval = async (amount: BigNumberish): Promise<ethers.ContractTransaction> => {
+    setCollateralApproval = async (amount: BigNumberish): Promise<ContractTransaction> => {
         return this._collateral.approve(this.contractAddress, amount, {
             gasLimit: ethers.BigNumber.from(1e6), //[LEM] gasLimit
         });
@@ -185,7 +185,7 @@ export class MarketMakerRepo implements MarketMakerRepoInterface {
         return this._contract.allowance(account, this.contractAddress);
     };
 
-    setLPTokenApproval = async (amount: BigNumberish): Promise<ethers.ContractTransaction> => {
+    setLPTokenApproval = async (amount: BigNumberish): Promise<ContractTransaction> => {
         return this._contract.approve(this.contractAddress, amount, {
             gasLimit: ethers.BigNumber.from(1e6), //[LEM] gasLimit
         });
@@ -199,7 +199,7 @@ export class MarketMakerRepo implements MarketMakerRepoInterface {
         return this._conditionalTokens.getApprovalForAll(account, this.contractAddress);
     };
 
-    setConditionalTokenApproval = async (approved: boolean): Promise<ethers.ContractTransaction> => {
+    setConditionalTokenApproval = async (approved: boolean): Promise<ContractTransaction> => {
         return this._conditionalTokens.setApprovalForAll(this.contractAddress, approved);
     };
 

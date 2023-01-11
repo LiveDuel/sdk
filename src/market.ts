@@ -1,4 +1,4 @@
-import { ethers, BigNumberish, Signer, utils } from "ethers";
+import { ethers, BigNumber, BigNumberish, Signer, utils, ContractTransaction } from "ethers";
 import { initial } from "lodash";
 import { ConditionalTokensRepo } from "./conditionalTokens";
 import { ERC20__factory, FixedProductMarketMaker__factory } from "./contracts";
@@ -14,57 +14,39 @@ export interface MarketInterface {
 
     /**
      * Buy a quantity of tokens
-     * @param amounts Array of numbers representing quantity. Each entry corresponds to an Outcome, both keyed by the same index
+     * @param amountInvest Amount of collateral tokens to put into the market
+     * @param outcomeIndex Index of outcome tokens to be bought
      * @param slippage The percent slippage acceptable
-     * @returns Promise which resolves to a transaction hash
+     * @returns Promise which resolves to a transaction
      */
-    buy: (amounts: string[], slippage: number) => Promise<ethers.ContractTransaction>;
+    buy: (
+        amountInvest: BigNumberish,
+        outcomeIndex: number,
+        slippage: number
+    ) => Promise<ContractTransaction>;
 
     /**
      * Sell a quantity of tokens
-     * @param amounts Array of numbers representing quantity. Each entry corresponds to an Outcome, both keyed by the same index
+     * @param amountReturn Amount of collateral tokens to buy back from the market
+     * @param outcomeIndex Index of outcome tokens to be sold
      * @param slippage The percent slippage acceptable
-     * @returns Promise which resolves to a transaction hash
+     * @returns Promise which resolves to a transaction
      */
-    sell: (amounts: string[], slippage: number) => Promise<ethers.ContractTransaction>;
+    sell: (
+        amountReturn: BigNumberish,
+        outcomeIndex: number,
+        slippage: number
+    ) => Promise<ContractTransaction>;
 
-    /**
-     * Add liquidity to a market
-     * @param amount Amount of collateral token to spend
-     * @returns Transaction hash and a promise which resolves to the number of LP tokens purchased
-     */
-    addLiquidity: (amount: number) => [string, Promise<number>];
+    // addLiquidity: (amount: number) => [string, Promise<number>];
 
-    /**
-     * Redeem position from market (after its closed?)
-     * @returns Transaction hash and a promise which resolves to the number of LP tokens purchased
-     */
-    // redeem: () => Promise<ethers.ContractTransaction>;
+    // removeLiquidity: (amount: number) => [string, Promise<number>];
 
-    /**
-     * Remove liquidity from a market
-     * @param amount Amount of LP tokens to sell
-     * @returns Transaction hash and a promise which resolves to the amount of collateral token received
-     */
-    removeLiquidity: (amount: number) => [string, Promise<number>];
+    // getCurrentPrices: () => Promise<[number, number][]>;
 
-    /**
-     * Fetch current prices & probability of each outcome from the market
-     * @returns ordered set of [price, probability] for [home, away, draw]
-     */
-    getCurrentPrices: () => Promise<[number, number][]>;
+    // priceHistory: (length: number) => number[][];
 
-    /**
-     * Load the historical prices of an Outcome
-     * @param length Number of units to fetch data for
-     */
-    priceHistory: (length: number) => number[][];
-
-    /**
-     * Load the historical volume of an Outcome
-     * @param length Number of units to fetch data for
-     */
-    volumeHistory: (length: number) => number[][];
+    // volumeHistory: (length: number) => number[][];
 }
 
 export class Market implements MarketInterface {
@@ -101,88 +83,65 @@ export class Market implements MarketInterface {
 
     //[LEM] slippage not considered
     //[LEM] ensure approvals
-    async buy(amounts: string[], slippage: number): Promise<ethers.ContractTransaction> {
+    async buy(
+        amountInvest: BigNumberish,
+        outcomeIndex: number,
+        slippage: number
+    ): Promise<ContractTransaction> {
         try {
+            //[LEM] Temp
+            const MINTOKENS = "1";
+
             const account = await this._signer.getAddress();
-
-            let cost = await this._marketMaker.calcNetCostRemote(amounts);
-
-            //[LEM] accounting for cost+fees+otherstuff
-            const AMOUNT_BUFFER = 1e6;
-            cost = cost.add(AMOUNT_BUFFER);
-
             const collateralBalance = await this._marketMaker.getCollateralBalance(account);
 
-            if (cost.gt(collateralBalance)) {
+            if (BigNumber.from(amountInvest).gt(collateralBalance)) {
                 throw new Error("Insufficient collateral balance in account");
             } else {
-                await this._marketMaker.setCollateralApproval(cost, account);
-                const trx = await this._marketMaker.trade(amounts, cost, account);
-                return trx;
+                let trx1 = await this._marketMaker.setCollateralApproval(amountInvest);
+                await trx1.wait();
+                let trx2 = await this._marketMaker.buy(amountInvest, outcomeIndex, MINTOKENS);
+                return trx2;
             }
         } catch (error) {
             throw error;
         }
     }
 
-    async sell(amounts: string[], slippage: number): Promise<ethers.ContractTransaction> {
+    async sell(
+        amountReturn: BigNumberish,
+        outcomeIndex: number,
+        slippage: number
+    ): Promise<ContractTransaction> {
         try {
+            //[LEM] Temp
+            const MAXTOKENS = "1" + "0".repeat(22);
+
             const account = await this._signer.getAddress();
 
-            //[LEM] ensure 1155 token balance > amounts
+            const outcomeTokenBalance = await this._marketMaker.getConditionalTokenBalance(
+                account,
+                this.outcomes[outcomeIndex].positionId
+            );
+            const outcomeTokensToSell = await this._marketMaker.calcSellTokens(
+                amountReturn,
+                outcomeIndex
+            );
+            //[LEM] slippage not considered (outcomeTokensToSell + slippage%OfTokens)
+            if (outcomeTokensToSell.gt(outcomeTokenBalance)) {
+                throw new Error("Insufficient position token balance in account");
+            }
             const isApproved = await this._marketMaker.getConditionalTokenApproval(account);
             if (!isApproved) {
-                await this._marketMaker.setConditionalTokenApproval(true, account);
+                let trx1 = await this._marketMaker.setConditionalTokenApproval(true);
+                await trx1.wait();
             }
 
-            amounts = amounts.map((i) => "-" + i);
-            const profit = await this._marketMaker.calcNetCostRemote(amounts);
-            const trx = await this._marketMaker.trade(amounts, profit, account);
-            return trx;
+            let trx2 = await this._marketMaker.sell(amountReturn, outcomeIndex, MAXTOKENS);
+            return trx2;
         } catch (error) {
             throw error;
         }
-    }
-
-    addLiquidity(amount: number): [string, Promise<number>] {
-        let transactionHash = utils.randomBytes(32).toString();
-        let liquidityAdded: Promise<number> = new Promise((resolve, reject) => resolve(amount));
-
-        return [transactionHash, liquidityAdded];
-    }
-
-    removeLiquidity(amount: number): [string, Promise<number>] {
-        let transactionHash = utils.randomBytes(32).toString();
-        let liquidityRemoved: Promise<number> = new Promise((resolve, reject) => resolve(amount));
-
-        return [transactionHash, liquidityRemoved];
-    }
-
-    async getNetCost(amounts: string[], buy: boolean): Promise<string> {
-        if (!buy) amounts = amounts.map((i) => "-" + i);
-        const cost = await this._marketMaker.calcNetCostRemote(amounts);
-        return cost.toString();
-    }
-
-    async getCurrentPrices(): Promise<[number, number][]> {
-        let prices = [];
-        for (let i = 0; i < this.outcomes.length; i++) {
-            const [price, prob] = await this._marketMaker.calcPriceRemote(i);
-            prices.push([price, prob] as [number, number]);
-        }
-        return prices;
-    }
-
-    priceHistory(length: number): number[][] {
-        return this.outcomes.map((_, idx) => {
-            return Array.from(Array(length).keys()).map(() => Math.random());
-        });
-    }
-
-    volumeHistory(length: number): number[][] {
-        return this.outcomes.map((_, idx) => {
-            return Array.from(Array(length).keys()).map(() => Math.random());
-        });
     }
 
     /**
