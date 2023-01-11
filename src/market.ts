@@ -1,6 +1,7 @@
 import { ethers, BigNumberish, Signer, utils } from "ethers";
+import { initial } from "lodash";
 import { ConditionalTokensRepo } from "./conditionalTokens";
-import { ERC20__factory } from "./contracts";
+import { ERC20__factory, FixedProductMarketMaker__factory } from "./contracts";
 import { MarketMakerRepo, MarketMakerFactoryRepo } from "./fpmm";
 import { Outcome } from "./utils";
 
@@ -208,7 +209,7 @@ export class Market implements MarketInterface {
         outcomes: Outcome[],
         fee: BigNumberish
     ): Promise<Market> {
-        const lmsrMarketMaker: MarketMakerRepo = await MarketMakerRepo.initialize(
+        const fpmmRepo: MarketMakerRepo = await MarketMakerRepo.initialize(
             signer,
             marketMakerAddress,
             conditionalTokensAddress,
@@ -223,7 +224,7 @@ export class Market implements MarketInterface {
             questionId,
             outcomes,
             fee,
-            lmsrMarketMaker
+            fpmmRepo
         );
     }
 }
@@ -247,6 +248,7 @@ export class MarketAdmin {
      * @param outcomes Array of outcome objects
      * @param fee fee (uint64)
      * @param funding initial funding provided to the market
+     * @param initialOdds: initial odds for outcomes of the market
      * @returns [conditionId, lmsrmmAddress]
      */
     static async createMarket(
@@ -258,32 +260,43 @@ export class MarketAdmin {
         questionId: string,
         outcomes: Outcome[],
         fee: BigNumberish,
-        funding: BigNumberish
+        funding: BigNumberish,
+        initialOdds: number[]
     ): Promise<[string, string]> {
         try {
             // init
+            const account = await signer.getAddress();
             const ctRepo = new ConditionalTokensRepo(signer, conditionalTokensAddress);
-            const lmsrmmFactoryRepo = new MarketMakerFactoryRepo(signer, marketMakerFactoryAddress);
+            const fpmmFactoryRepo = new MarketMakerFactoryRepo(signer, marketMakerFactoryAddress);
 
-            // approve collateral to be funded to LMSR
-            const collateral = ERC20__factory.connect(collateralAddress, signer);
-            let trx = await collateral.approve(marketMakerFactoryAddress, funding);
-            await trx.wait();
-
-            // `prepareCondition` & set up `LMSRMarketMaker`
+            // `prepareCondition` & set up `FixedProductMarketMaker`
             const conditionId = await ctRepo.createCondition(oracle, questionId, outcomes);
-            const lmsrmmAddress = await lmsrmmFactoryRepo.createLMSRMarketMaker(
+            const fpmmAddress = await fpmmFactoryRepo.createFPMarketMaker(
                 collateralAddress,
                 conditionalTokensAddress,
                 conditionId,
-                fee,
-                funding
+                fee
             );
 
-            console.log("[INFO] Created Condition ID:    ", conditionId);
-            console.log("[INFO] LMSRMarketMaker Address: ", lmsrmmAddress);
+            // approve collateral to be funded to LMSR
+            const collateral = ERC20__factory.connect(collateralAddress, signer);
+            let trx1 = await collateral.approve(fpmmAddress, funding, { from: account });
+            await trx1.wait();
 
-            return [conditionId, lmsrmmAddress];
+            const fpmmRepo = await MarketMakerRepo.initialize(
+                signer,
+                fpmmAddress,
+                conditionalTokensAddress,
+                collateralAddress
+            );
+            let trx2 = await fpmmRepo.addLiquidityInitial(funding, initialOdds, account);
+            await trx2.wait();
+
+            console.log("[INFO] Market Creator Address: ", account);
+            console.log("[INFO] Created Condition ID:   ", conditionId);
+            console.log("[INFO] FPMarketMaker Address:  ", fpmmAddress);
+
+            return [conditionId, fpmmAddress];
         } catch (error) {
             throw error;
         }

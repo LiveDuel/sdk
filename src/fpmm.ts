@@ -92,6 +92,16 @@ export interface MarketMakerRepoInterface {
     setConditionalTokenApproval: (approved: boolean, from: string) => Promise<ContractTransaction>;
 
     /* MARKET METHODS */
+    addLiquidityInitial: (
+        amount: BigNumberish,
+        initialOdds: number[],
+        from: string
+    ) => Promise<ContractTransaction>;
+
+    // addLiquidity: (amount: BigNumberish, from: string) => Promise<ContractTransaction>;
+
+    // removeLiquidity: (amountLP: BigNumberish, from: string) => Promise<ContractTransaction>;
+
     //[LEM] convert to local calculation
     calcBuyTokens: (amountInvest: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
 
@@ -114,10 +124,6 @@ export interface MarketMakerRepoInterface {
         maxOutcomeTokensToSell: BigNumberish,
         from: string
     ) => Promise<ContractTransaction>;
-
-    // addLiquidity: (amount: BigNumberish, from: string) => Promise<ContractTransaction>;
-
-    // removeLiquidity: (amountLP: BigNumberish, from: string) => Promise<ContractTransaction>;
 
     /* FEE METHODS */
     // getWithdrawableFeeAmount: (account: string) => Promise<BigNumber>;
@@ -215,6 +221,16 @@ export class MarketMakerRepo implements MarketMakerRepoInterface {
     };
 
     /* MARKET METHODS */
+    addLiquidityInitial = async (
+        amount: BigNumberish,
+        initialOdds: number[],
+        from: string
+    ): Promise<ContractTransaction> => {
+        //[LEM] calculate distHint from odds
+        const distHint = initialOdds;
+        return this._contract.addFunding(amount, distHint, { from });
+    };
+
     calcBuyTokens = async (amountInvest: BigNumberish, outcomeIndex: number): Promise<BigNumber> => {
         return this._contract.calcBuyAmount(amountInvest, outcomeIndex);
     };
