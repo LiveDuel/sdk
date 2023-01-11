@@ -1,7 +1,6 @@
 import { ethers, BigNumber, BigNumberish, Signer, utils, ContractTransaction } from "ethers";
-import { initial } from "lodash";
+import _ from "lodash";
 import { ConditionalTokensRepo } from "./conditionalTokens";
-import { ERC20__factory, FixedProductMarketMaker__factory } from "./contracts";
 import { MarketMakerRepo, MarketMakerFactoryRepo } from "./fpmm";
 import { Outcome } from "./utils";
 
