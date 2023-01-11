@@ -12,11 +12,11 @@ export interface MarketInterface {
     readonly outcomes: Outcome[];
     readonly fee: BigNumberish;
 
+    getUserTokenBalances: () => Promise<BigNumber[]>;
+
+    getPoolTokenBalances: () => Promise<BigNumber[]>;
+
     getCurrentOdds: () => Promise<number[]>;
-
-    getPoolTokenBalances: () => Promise<number[]>;
-
-    getUserTokenBalances: () => Promise<number[]>;
 
     /**
      * Buy a quantity of tokens
@@ -85,11 +85,45 @@ export class Market implements MarketInterface {
         this.fee = fee;
     }
 
-    getCurrentOdds = async (): Promise<number[]> => {};
+    getUserTokenBalances = async (): Promise<BigNumber[]> => {
+        const account = await this._signer.getAddress();
 
-    getPoolTokenBalances = async (): Promise<number[]> => {};
+        const balances = [];
+        for (const outcome of this.outcomes) {
+            let bal = await this._marketMaker.getConditionalTokenBalance(account, outcome.positionId);
+            balances.push(bal);
+        }
+        return balances;
+    };
 
-    getUserTokenBalances = async (): Promise<number[]> => {};
+    getPoolTokenBalances = async (): Promise<BigNumber[]> => {
+        const balances = [];
+        for (const outcome of this.outcomes) {
+            let bal = await this._marketMaker.getConditionalTokenBalance(
+                this._marketMaker.contractAddress,
+                outcome.positionId
+            );
+            balances.push(bal);
+        }
+        return balances;
+    };
+
+    getCurrentOdds = async (): Promise<number[]> => {
+        const balancesRaw = await this.getPoolTokenBalances();
+        const balances = balancesRaw.map((i: BigNumber) => utils.formatEther(i));
+
+        const oddsWeight: number[] = [];
+        for (let i = 0; i < balances.length; i++) {
+            const bf = balances.filter((item: string, index: number) => index != i);
+            const bm = bf.map((item: string) => Number(item));
+            const br = bm.reduce((acc = 1, item: number) => (acc *= item));
+            oddsWeight.push(br);
+        }
+        const oddsWeightSum = oddsWeight.reduce((acc = 0, item: number) => (acc += item));
+        const odds = oddsWeight.map((item: number) => item / oddsWeightSum);
+
+        return odds;
+    };
 
     //[LEM] slippage not considered
     //[LEM] ensure approvals
@@ -202,7 +236,7 @@ export class MarketAdmin {
     //pause
     //resume
     //resolve-reportPayouts
-    //withdrawFee //close
+    //withdrawFee
 
     /**
      * Creates a market and a market maker for the specified market details.
