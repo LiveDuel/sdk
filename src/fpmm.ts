@@ -60,9 +60,7 @@ export class MarketMakerFactoryRepo implements MarketMakerFactoryRepoInterface {
             return deployedMarketAddress;
         } else {
             console.error(JSON.stringify(tx, null, 2));
-            throw new Error(
-                "No FixedProductMarketMakerCreation Event fired. Please check the TX above"
-            );
+            throw new Error("No FixedProductMarketMakerCreation Event fired. Please check the TX above");
         }
     };
 }

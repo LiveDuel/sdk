@@ -12,6 +12,12 @@ export interface MarketInterface {
     readonly outcomes: Outcome[];
     readonly fee: BigNumberish;
 
+    getCurrentOdds: () => Promise<number[]>;
+
+    getPoolTokenBalances: () => Promise<number[]>;
+
+    getUserTokenBalances: () => Promise<number[]>;
+
     /**
      * Buy a quantity of tokens
      * @param amountInvest Amount of collateral tokens to put into the market
@@ -38,15 +44,13 @@ export interface MarketInterface {
         slippage: number
     ) => Promise<ContractTransaction>;
 
-    // addLiquidity: (amount: number) => [string, Promise<number>];
+    // addLiquidity: (amount: number) => Promise<>;
 
-    // removeLiquidity: (amount: number) => [string, Promise<number>];
+    // removeLiquidity: (amount: number) => Promise<>;
 
-    // getCurrentPrices: () => Promise<[number, number][]>;
+    // priceHistory: (length: number) => Promise<>;
 
-    // priceHistory: (length: number) => number[][];
-
-    // volumeHistory: (length: number) => number[][];
+    // volumeHistory: (length: number) => Promise<>;
 }
 
 export class Market implements MarketInterface {
@@ -83,11 +87,11 @@ export class Market implements MarketInterface {
 
     //[LEM] slippage not considered
     //[LEM] ensure approvals
-    async buy(
+    buy = async (
         amountInvest: BigNumberish,
         outcomeIndex: number,
         slippage: number
-    ): Promise<ContractTransaction> {
+    ): Promise<ContractTransaction> => {
         try {
             //[LEM] Temp
             const MINTOKENS = "1";
@@ -106,13 +110,13 @@ export class Market implements MarketInterface {
         } catch (error) {
             throw error;
         }
-    }
+    };
 
-    async sell(
+    sell = async (
         amountReturn: BigNumberish,
         outcomeIndex: number,
         slippage: number
-    ): Promise<ContractTransaction> {
+    ): Promise<ContractTransaction> => {
         try {
             //[LEM] Temp
             const MAXTOKENS = "1" + "0".repeat(22);
@@ -142,7 +146,7 @@ export class Market implements MarketInterface {
         } catch (error) {
             throw error;
         }
-    }
+    };
 
     /**
      * Safely initializes the Market class instance to be used by clients/traders.
