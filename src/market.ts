@@ -121,7 +121,6 @@ export class Market implements MarketInterface {
         }
         const oddsWeightSum = oddsWeight.reduce((acc = 0, item: number) => (acc += item));
         const odds = oddsWeight.map((item: number) => item / oddsWeightSum);
-
         return odds;
     };
 
