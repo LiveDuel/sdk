@@ -16,6 +16,12 @@ export interface ConditionalTokensRepoInterface {
         operatorAddress: string,
         approved: boolean
     ) => Promise<ethers.ContractTransaction>;
+
+    getPositionId: (
+        collateralAddress: string,
+        conditionId: string,
+        outcomeIndex: number
+    ) => Promise<string>;
 }
 
 export class ConditionalTokensRepo implements ConditionalTokensRepoInterface {
@@ -75,5 +81,22 @@ export class ConditionalTokensRepo implements ConditionalTokensRepoInterface {
         return this._contract.setApprovalForAll(operatorAddress, approved, {
             gasLimit: ethers.BigNumber.from(1e6), //[LEM] gasLimit
         });
+    };
+
+    getPositionId = async (
+        collateralAddress: string,
+        conditionId: string,
+        outcomeIndex: number
+    ): Promise<string> => {
+        const INDEX_SETS = [1, 2, 4];
+        const PARENT_COLLECTION_ID = "0x" + "0".repeat(64);
+
+        const collectionId = await this._contract.getCollectionId(
+            PARENT_COLLECTION_ID,
+            conditionId,
+            INDEX_SETS[outcomeIndex]
+        );
+        const positionId = await this._contract.getPositionId(collateralAddress, collectionId);
+        return positionId.toString();
     };
 }
