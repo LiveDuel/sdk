@@ -276,7 +276,7 @@ export class MarketAdmin {
                 fee
             );
 
-            // // approve collateral and fund FixedProductMarketMaker
+            // approve collateral and fund FixedProductMarketMaker
             const fpmmRepo = await MarketMakerRepo.initialize(
                 signer,
                 fpmmAddress,

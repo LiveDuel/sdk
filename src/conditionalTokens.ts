@@ -1,6 +1,5 @@
 import { BigNumber, BigNumberish, ethers, Signer } from "ethers";
 import { ConditionalTokens, ConditionalTokens__factory } from "./contracts";
-import { Outcome } from "./utils";
 
 export interface ConditionalTokensRepoInterface {
     readonly address: string;
