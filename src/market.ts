@@ -1,7 +1,7 @@
-import { ethers, BigNumber, BigNumberish, Signer, utils } from "ethers";
+import { ethers, BigNumber, BigNumberish, Signer, utils, ContractTransaction } from "ethers";
+import _ from "lodash";
 import { ConditionalTokensRepo } from "./conditionalTokens";
-import { ERC20__factory } from "./contracts";
-import { MarketMakerRepo, MarketMakerFactoryRepo } from "./lmsr";
+import { MarketMakerRepo, MarketMakerFactoryRepo } from "./fpmm";
 import { Outcome } from "./utils";
 
 export interface MarketInterface {
@@ -11,59 +11,53 @@ export interface MarketInterface {
     readonly outcomes: Outcome[];
     readonly fee: BigNumberish;
 
+    getUserTokenBalances: () => Promise<BigNumber[]>;
+
+    getPoolTokenBalances: () => Promise<BigNumber[]>;
+
+    getCurrentOdds: () => Promise<number[]>;
+
+    calcBuyTokens: (amountInvest: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
+
+    calcSellTokens: (amountReturn: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
+
+    // calcBuyAmount: (tokenAmountBuy: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
+
+    // calcSellAmount: (tokenAmountSell: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
+
     /**
      * Buy a quantity of tokens
-     * @param amounts Array of numbers representing quantity. Each entry corresponds to an Outcome, both keyed by the same index
+     * @param amountInvest Amount of collateral tokens to put into the market
+     * @param outcomeIndex Index of outcome tokens to be bought
      * @param slippage The percent slippage acceptable
-     * @returns Promise which resolves to a transaction hash
+     * @returns Promise which resolves to a transaction
      */
-    buy: (amounts: string[], slippage: number) => Promise<ethers.ContractTransaction>;
+    buy: (
+        amountInvest: BigNumberish,
+        outcomeIndex: number,
+        slippage: number
+    ) => Promise<ContractTransaction>;
 
     /**
      * Sell a quantity of tokens
-     * @param amounts Array of numbers representing quantity. Each entry corresponds to an Outcome, both keyed by the same index
+     * @param amountReturn Amount of collateral tokens to buy back from the market
+     * @param outcomeIndex Index of outcome tokens to be sold
      * @param slippage The percent slippage acceptable
-     * @returns Promise which resolves to a transaction hash
+     * @returns Promise which resolves to a transaction
      */
-    sell: (amounts: string[], slippage: number) => Promise<ethers.ContractTransaction>;
+    sell: (
+        amountReturn: BigNumberish,
+        outcomeIndex: number,
+        slippage: number
+    ) => Promise<ContractTransaction>;
 
-    /**
-     * Add liquidity to a market
-     * @param amount Amount of collateral token to spend
-     * @returns Transaction hash and a promise which resolves to the number of LP tokens purchased
-     */
-    addLiquidity: (amount: number) => [string, Promise<number>];
+    // addLiquidity: (amount: number) => Promise<>;
 
-    /**
-     * Redeem position from market (after its closed?)
-     * @returns Transaction hash and a promise which resolves to the number of LP tokens purchased
-     */
-    // redeem: () => Promise<ethers.ContractTransaction>;
+    // removeLiquidity: (amount: number) => Promise<>;
 
-    /**
-     * Remove liquidity from a market
-     * @param amount Amount of LP tokens to sell
-     * @returns Transaction hash and a promise which resolves to the amount of collateral token received
-     */
-    removeLiquidity: (amount: number) => [string, Promise<number>];
+    // priceHistory: (length: number) => Promise<>;
 
-    /**
-     * Fetch current prices & probability of each outcome from the market
-     * @returns ordered set of [price, probability] for [home, away, draw]
-     */
-    getCurrentPrices: () => Promise<[number, number][]>;
-
-    /**
-     * Load the historical prices of an Outcome
-     * @param length Number of units to fetch data for
-     */
-    priceHistory: (length: number) => number[][];
-
-    /**
-     * Load the historical volume of an Outcome
-     * @param length Number of units to fetch data for
-     */
-    volumeHistory: (length: number) => number[][];
+    // volumeHistory: (length: number) => Promise<>;
 }
 
 export class Market implements MarketInterface {
@@ -98,91 +92,115 @@ export class Market implements MarketInterface {
         this.fee = fee;
     }
 
+    getUserTokenBalances = async (): Promise<BigNumber[]> => {
+        const account = await this._signer.getAddress();
+
+        const balances = [];
+        for (const outcome of this.outcomes) {
+            let bal = await this._marketMaker.getConditionalTokenBalance(account, outcome.positionId);
+            balances.push(bal);
+        }
+        return balances;
+    };
+
+    getPoolTokenBalances = async (): Promise<BigNumber[]> => {
+        const balances = [];
+        for (const outcome of this.outcomes) {
+            let bal = await this._marketMaker.getConditionalTokenBalance(
+                this._marketMaker.contractAddress,
+                outcome.positionId
+            );
+            balances.push(bal);
+        }
+        return balances;
+    };
+
+    getCurrentOdds = async (): Promise<number[]> => {
+        const balancesRaw = await this.getPoolTokenBalances();
+        const balances = balancesRaw.map((i: BigNumber) => utils.formatEther(i));
+
+        const oddsWeight: number[] = [];
+        for (let i = 0; i < balances.length; i++) {
+            const bf = balances.filter((item: string, index: number) => index != i);
+            const bm = bf.map((item: string) => Number(item));
+            const br = bm.reduce((acc = 1, item: number) => (acc *= item));
+            oddsWeight.push(br);
+        }
+        const oddsWeightSum = oddsWeight.reduce((acc = 0, item: number) => (acc += item));
+        const odds = oddsWeight.map((item: number) => item / oddsWeightSum);
+        return odds;
+    };
+
+    calcBuyTokens = async (amountInvest: BigNumberish, outcomeIndex: number): Promise<BigNumber> => {
+        return this._marketMaker.calcBuyTokens(amountInvest, outcomeIndex);
+    };
+
+    calcSellTokens = async (amountReturn: BigNumberish, outcomeIndex: number): Promise<BigNumber> => {
+        return this._marketMaker.calcSellTokens(amountReturn, outcomeIndex);
+    };
+
     //[LEM] slippage not considered
     //[LEM] ensure approvals
-    async buy(amounts: string[], slippage: number): Promise<ethers.ContractTransaction> {
+    buy = async (
+        amountInvest: BigNumberish,
+        outcomeIndex: number,
+        slippage: number
+    ): Promise<ContractTransaction> => {
         try {
+            //[LEM] Temp
+            const MINTOKENS = "1";
+
             const account = await this._signer.getAddress();
-
-            let cost = await this._marketMaker.calcNetCostRemote(amounts);
-
-            //[LEM] accounting for cost+fees+otherstuff
-            const AMOUNT_BUFFER = 1e6;
-            cost = cost.add(AMOUNT_BUFFER);
-
             const collateralBalance = await this._marketMaker.getCollateralBalance(account);
 
-            if (cost.gt(collateralBalance)) {
+            if (BigNumber.from(amountInvest).gt(collateralBalance)) {
                 throw new Error("Insufficient collateral balance in account");
             } else {
-                await this._marketMaker.setCollateralApproval(cost, account);
-                const trx = await this._marketMaker.trade(amounts, cost, account);
-                return trx;
+                let trx1 = await this._marketMaker.setCollateralApproval(amountInvest);
+                await trx1.wait();
+                let trx2 = await this._marketMaker.buy(amountInvest, outcomeIndex, MINTOKENS);
+                return trx2;
             }
         } catch (error) {
             throw error;
         }
-    }
+    };
 
-    async sell(amounts: string[], slippage: number): Promise<ethers.ContractTransaction> {
+    sell = async (
+        amountReturn: BigNumberish,
+        outcomeIndex: number,
+        slippage: number
+    ): Promise<ContractTransaction> => {
         try {
+            //[LEM] Temp
+            const MAXTOKENS = "1" + "0".repeat(22);
+
             const account = await this._signer.getAddress();
 
-            //[LEM] ensure 1155 token balance > amounts
+            const outcomeTokenBalance = await this._marketMaker.getConditionalTokenBalance(
+                account,
+                this.outcomes[outcomeIndex].positionId
+            );
+            const outcomeTokensToSell = await this._marketMaker.calcSellTokens(
+                amountReturn,
+                outcomeIndex
+            );
+            //[LEM] slippage not considered (outcomeTokensToSell + slippage%OfTokens)
+            if (outcomeTokensToSell.gt(outcomeTokenBalance)) {
+                throw new Error("Insufficient position token balance in account");
+            }
             const isApproved = await this._marketMaker.getConditionalTokenApproval(account);
             if (!isApproved) {
-                await this._marketMaker.setConditionalTokenApproval(true, account);
+                let trx1 = await this._marketMaker.setConditionalTokenApproval(true);
+                await trx1.wait();
             }
 
-            amounts = amounts.map((i) => "-" + i);
-            const profit = await this._marketMaker.calcNetCostRemote(amounts);
-            const trx = await this._marketMaker.trade(amounts, profit, account);
-            return trx;
+            let trx2 = await this._marketMaker.sell(amountReturn, outcomeIndex, MAXTOKENS);
+            return trx2;
         } catch (error) {
             throw error;
         }
-    }
-
-    addLiquidity(amount: number): [string, Promise<number>] {
-        let transactionHash = utils.randomBytes(32).toString();
-        let liquidityAdded: Promise<number> = new Promise((resolve, reject) => resolve(amount));
-
-        return [transactionHash, liquidityAdded];
-    }
-
-    removeLiquidity(amount: number): [string, Promise<number>] {
-        let transactionHash = utils.randomBytes(32).toString();
-        let liquidityRemoved: Promise<number> = new Promise((resolve, reject) => resolve(amount));
-
-        return [transactionHash, liquidityRemoved];
-    }
-
-    async getNetCost(amounts: string[], buy: boolean): Promise<string> {
-        if (!buy) amounts = amounts.map((i) => "-" + i);
-        const cost = await this._marketMaker.calcNetCostRemote(amounts);
-        return cost.toString();
-    }
-
-    async getCurrentPrices(): Promise<[number, number][]> {
-        let prices = [];
-        for (let i = 0; i < this.outcomes.length; i++) {
-            const [price, prob] = await this._marketMaker.calcPriceRemote(i);
-            prices.push([price, prob] as [number, number]);
-        }
-        return prices;
-    }
-
-    priceHistory(length: number): number[][] {
-        return this.outcomes.map((_, idx) => {
-            return Array.from(Array(length).keys()).map(() => Math.random());
-        });
-    }
-
-    volumeHistory(length: number): number[][] {
-        return this.outcomes.map((_, idx) => {
-            return Array.from(Array(length).keys()).map(() => Math.random());
-        });
-    }
+    };
 
     /**
      * Safely initializes the Market class instance to be used by clients/traders.
@@ -208,7 +226,7 @@ export class Market implements MarketInterface {
         outcomes: Outcome[],
         fee: BigNumberish
     ): Promise<Market> {
-        const lmsrMarketMaker: MarketMakerRepo = await MarketMakerRepo.initialize(
+        const fpmmRepo: MarketMakerRepo = await MarketMakerRepo.initialize(
             signer,
             marketMakerAddress,
             conditionalTokensAddress,
@@ -223,7 +241,7 @@ export class Market implements MarketInterface {
             questionId,
             outcomes,
             fee,
-            lmsrMarketMaker
+            fpmmRepo
         );
     }
 }
@@ -232,9 +250,7 @@ export class MarketAdmin {
     //pause
     //resume
     //resolve-reportPayouts
-    //withdrawFee //close
-    //changeFee
-    //changeFunding
+    //withdrawFee
 
     /**
      * Creates a market and a market maker for the specified market details.
@@ -247,6 +263,7 @@ export class MarketAdmin {
      * @param outcomes Array of outcome objects
      * @param fee fee (uint64)
      * @param funding initial funding provided to the market
+     * @param initialOdds: initial odds for outcomes of the market
      * @returns [conditionId, lmsrmmAddress]
      */
     static async createMarket(
@@ -258,32 +275,41 @@ export class MarketAdmin {
         questionId: string,
         outcomes: Outcome[],
         fee: BigNumberish,
-        funding: BigNumberish
+        funding: BigNumberish,
+        initialOdds: number[]
     ): Promise<[string, string]> {
         try {
             // init
             const ctRepo = new ConditionalTokensRepo(signer, conditionalTokensAddress);
-            const lmsrmmFactoryRepo = new MarketMakerFactoryRepo(signer, marketMakerFactoryAddress);
+            const fpmmFactoryRepo = new MarketMakerFactoryRepo(signer, marketMakerFactoryAddress);
 
-            // approve collateral to be funded to LMSR
-            const collateral = ERC20__factory.connect(collateralAddress, signer);
-            let trx = await collateral.approve(marketMakerFactoryAddress, funding);
-            await trx.wait();
-
-            // `prepareCondition` & set up `LMSRMarketMaker`
-            const conditionId = await ctRepo.createCondition(oracle, questionId, outcomes);
-            const lmsrmmAddress = await lmsrmmFactoryRepo.createLMSRMarketMaker(
+            // `prepareCondition` & set up `FixedProductMarketMaker`
+            const conditionId = await ctRepo.createCondition(oracle, questionId, outcomes.length);
+            const fpmmAddress = await fpmmFactoryRepo.createFPMarketMaker(
                 collateralAddress,
                 conditionalTokensAddress,
                 conditionId,
-                fee,
-                funding
+                fee
             );
 
-            console.log("[INFO] Created Condition ID:    ", conditionId);
-            console.log("[INFO] LMSRMarketMaker Address: ", lmsrmmAddress);
+            // approve collateral and fund FixedProductMarketMaker
+            const fpmmRepo = await MarketMakerRepo.initialize(
+                signer,
+                fpmmAddress,
+                conditionalTokensAddress,
+                collateralAddress
+            );
+            let trx1 = await fpmmRepo.setCollateralApproval(funding);
+            await trx1.wait();
+            let trx2 = await fpmmRepo.addLiquidityInitial(funding, initialOdds);
+            await trx2.wait();
 
-            return [conditionId, lmsrmmAddress];
+            const account = await signer.getAddress();
+            console.log("[INFO] Market Creator Address: ", account);
+            console.log("[INFO] Created Condition ID:   ", conditionId);
+            console.log("[INFO] FPMarketMaker Address:  ", fpmmAddress);
+
+            return [conditionId, fpmmAddress];
         } catch (error) {
             throw error;
         }

@@ -1,21 +1,27 @@
 import { BigNumber, BigNumberish, ethers, Signer } from "ethers";
 import { ConditionalTokens, ConditionalTokens__factory } from "./contracts";
-import { Outcome } from "./utils";
 
 export interface ConditionalTokensRepoInterface {
     readonly address: string;
 
-    createCondition: (oracle: string, questionId: string, outcomes: Outcome[]) => Promise<string>;
+    createCondition: (oracle: string, questionId: string, numOutcomes: number) => Promise<string>;
 
     checkConditionExists: (conditionId: string) => Promise<boolean>;
+
+    getBalance: (account: string, positionId: string) => Promise<BigNumber>;
 
     getApprovalForAll: (account: string, operatorAddress: string) => Promise<boolean>;
 
     setApprovalForAll: (
         operatorAddress: string,
-        approved: boolean,
-        from: string
+        approved: boolean
     ) => Promise<ethers.ContractTransaction>;
+
+    getPositionId: (
+        collateralAddress: string,
+        conditionId: string,
+        outcomeIndex: number
+    ) => Promise<string>;
 }
 
 export class ConditionalTokensRepo implements ConditionalTokensRepoInterface {
@@ -37,17 +43,15 @@ export class ConditionalTokensRepo implements ConditionalTokensRepoInterface {
     createCondition = async (
         oracle: string,
         questionId: string,
-        outcomes: Outcome[]
+        numOutcomes: number
     ): Promise<string> => {
         let { events } = await this._contract
-            .prepareCondition(oracle, questionId, outcomes.length, {
-                gasLimit: BigNumber.from(1e6),
+            .prepareCondition(oracle, questionId, numOutcomes, {
+                gasLimit: BigNumber.from(1e6), //[LEM] gasLimit
             })
             .then((transaction) => transaction.wait(1));
 
-        let { args: event } = (events || []).filter(
-            (log) => log.event === "ConditionPreparation"
-        )[0];
+        let { args: event } = (events || []).filter((log) => log.event === "ConditionPreparation")[0];
 
         if (typeof event === "undefined") {
             throw new Error("Something weird happened with events");
@@ -62,15 +66,37 @@ export class ConditionalTokensRepo implements ConditionalTokensRepoInterface {
         return outcomeSlotCount > 0 ? true : false;
     };
 
+    getBalance = async (account: string, positionId: string): Promise<BigNumber> => {
+        return this._contract.balanceOf(account, positionId);
+    };
+
     getApprovalForAll = async (account: string, operatorAddress: string): Promise<boolean> => {
         return this._contract.isApprovedForAll(account, operatorAddress);
     };
 
     setApprovalForAll = async (
         operatorAddress: string,
-        approved: boolean,
-        from: string
+        approved: boolean
     ): Promise<ethers.ContractTransaction> => {
-        return this._contract.setApprovalForAll(operatorAddress, approved, { from });
+        return this._contract.setApprovalForAll(operatorAddress, approved, {
+            gasLimit: ethers.BigNumber.from(1e6), //[LEM] gasLimit
+        });
+    };
+
+    getPositionId = async (
+        collateralAddress: string,
+        conditionId: string,
+        outcomeIndex: number
+    ): Promise<string> => {
+        const INDEX_SETS = [1, 2, 4];
+        const PARENT_COLLECTION_ID = "0x" + "0".repeat(64);
+
+        const collectionId = await this._contract.getCollectionId(
+            PARENT_COLLECTION_ID,
+            conditionId,
+            INDEX_SETS[outcomeIndex]
+        );
+        const positionId = await this._contract.getPositionId(collateralAddress, collectionId);
+        return positionId.toString();
     };
 }
