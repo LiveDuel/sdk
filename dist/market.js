@@ -46,6 +46,12 @@ class Market {
             const odds = oddsWeight.map((item) => item / oddsWeightSum);
             return odds;
         });
+        this.calcBuyTokens = (amountInvest, outcomeIndex) => __awaiter(this, void 0, void 0, function* () {
+            return this._marketMaker.calcBuyTokens(amountInvest, outcomeIndex);
+        });
+        this.calcSellTokens = (amountReturn, outcomeIndex) => __awaiter(this, void 0, void 0, function* () {
+            return this._marketMaker.calcSellTokens(amountReturn, outcomeIndex);
+        });
         //[LEM] slippage not considered
         //[LEM] ensure approvals
         this.buy = (amountInvest, outcomeIndex, slippage) => __awaiter(this, void 0, void 0, function* () {

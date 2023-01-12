@@ -17,6 +17,14 @@ export interface MarketInterface {
 
     getCurrentOdds: () => Promise<number[]>;
 
+    calcBuyTokens: (amountInvest: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
+
+    calcSellTokens: (amountReturn: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
+
+    // calcBuyAmount: (tokenAmountBuy: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
+
+    // calcSellAmount: (tokenAmountSell: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
+
     /**
      * Buy a quantity of tokens
      * @param amountInvest Amount of collateral tokens to put into the market
@@ -121,6 +129,14 @@ export class Market implements MarketInterface {
         const oddsWeightSum = oddsWeight.reduce((acc = 0, item: number) => (acc += item));
         const odds = oddsWeight.map((item: number) => item / oddsWeightSum);
         return odds;
+    };
+
+    calcBuyTokens = async (amountInvest: BigNumberish, outcomeIndex: number): Promise<BigNumber> => {
+        return this._marketMaker.calcBuyTokens(amountInvest, outcomeIndex);
+    };
+
+    calcSellTokens = async (amountReturn: BigNumberish, outcomeIndex: number): Promise<BigNumber> => {
+        return this._marketMaker.calcSellTokens(amountReturn, outcomeIndex);
     };
 
     //[LEM] slippage not considered
