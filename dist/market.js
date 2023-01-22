@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MarketAdmin = exports.Market = void 0;
+exports.MarketWatcher = exports.MarketAdmin = exports.Market = void 0;
 const ethers_1 = require("ethers");
 const conditionalTokens_1 = require("./conditionalTokens");
 const fpmm_1 = require("./fpmm");
@@ -174,3 +174,36 @@ class MarketAdmin {
     }
 }
 exports.MarketAdmin = MarketAdmin;
+class MarketWatcher {
+    constructor(provider, marketMakerAddress, conditionalTokensAddress, conditionId, outcomes) {
+        this.getPoolTokenBalances = () => __awaiter(this, void 0, void 0, function* () {
+            const balances = [];
+            for (const outcome of this.outcomes) {
+                let bal = yield this._conditionalTokens.getBalance(this.marketMakerAddress, outcome.positionId);
+                balances.push(bal);
+            }
+            return balances;
+        });
+        this.getCurrentOdds = () => __awaiter(this, void 0, void 0, function* () {
+            const balancesRaw = yield this.getPoolTokenBalances();
+            const balances = balancesRaw.map((i) => ethers_1.utils.formatEther(i));
+            const oddsWeight = [];
+            for (let i = 0; i < balances.length; i++) {
+                const bf = balances.filter((item, index) => index != i);
+                const bm = bf.map((item) => Number(item));
+                const br = bm.reduce((acc = 1, item) => (acc *= item));
+                oddsWeight.push(br);
+            }
+            const oddsWeightSum = oddsWeight.reduce((acc = 0, item) => (acc += item));
+            const odds = oddsWeight.map((item) => item / oddsWeightSum);
+            return odds;
+        });
+        this.provider = provider;
+        this.marketMakerAddress = marketMakerAddress;
+        this.conditionalTokensAddress = conditionalTokensAddress;
+        this.conditionId = conditionId;
+        this.outcomes = outcomes;
+        this._conditionalTokens = new conditionalTokens_1.ConditionalTokensRepo(provider, conditionalTokensAddress);
+    }
+}
+exports.MarketWatcher = MarketWatcher;

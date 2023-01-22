@@ -20,7 +20,7 @@ export interface MarketMakerFactoryRepoInterface {
 }
 
 export class MarketMakerFactoryRepo implements MarketMakerFactoryRepoInterface {
-    private _contract: FixedProductMarketMakerFactory;
+    private readonly _contract: FixedProductMarketMakerFactory;
 
     constructor(signer: Signer, marketMakerFactoryAddress: string) {
         this._contract = FixedProductMarketMakerFactory__factory.connect(
@@ -125,9 +125,9 @@ export interface MarketMakerRepoInterface {
 
 export class MarketMakerRepo implements MarketMakerRepoInterface {
     /* PRIVATE PROPERTIES */
-    private _contract: FixedProductMarketMaker;
-    private _conditionalTokens: ConditionalTokensRepo;
-    private _collateral: ERC20;
+    private readonly _contract: FixedProductMarketMaker;
+    private readonly _conditionalTokens: ConditionalTokensRepo;
+    private readonly _collateral: ERC20;
 
     /* PUBLIC PROPERTIES */
     get contractAddress() {
