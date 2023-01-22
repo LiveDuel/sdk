@@ -1,5 +1,6 @@
-import { ethers, BigNumber, BigNumberish, Signer, utils, ContractTransaction } from "ethers";
 import _ from "lodash";
+import { ethers, BigNumber, BigNumberish, Signer, utils, ContractTransaction } from "ethers";
+import { Provider } from "@ethersproject/abstract-provider";
 import { ConditionalTokensRepo } from "./conditionalTokens";
 import { MarketMakerRepo, MarketMakerFactoryRepo } from "./fpmm";
 import { Outcome } from "./utils";
@@ -314,4 +315,70 @@ export class MarketAdmin {
             throw error;
         }
     }
+}
+
+export interface MarketWatcherInterface {
+    readonly provider: Provider;
+    readonly conditionId: string;
+    readonly marketMakerAddress: string;
+    readonly conditionalTokensAddress: string;
+    readonly outcomes: Outcome[];
+
+    getPoolTokenBalances: () => Promise<BigNumber[]>;
+
+    getCurrentOdds: () => Promise<number[]>;
+}
+
+export class MarketWatcher implements MarketWatcherInterface {
+    private readonly _conditionalTokens: ConditionalTokensRepo;
+
+    readonly provider: Provider;
+    readonly conditionId: string;
+    readonly marketMakerAddress: string;
+    readonly conditionalTokensAddress: string;
+    readonly outcomes: Outcome[];
+
+    constructor(
+        provider: Provider,
+        marketMakerAddress: string,
+        conditionalTokensAddress: string,
+        conditionId: string,
+        outcomes: Outcome[]
+    ) {
+        this.provider = provider;
+        this.marketMakerAddress = marketMakerAddress;
+        this.conditionalTokensAddress = conditionalTokensAddress;
+        this.conditionId = conditionId;
+        this.outcomes = outcomes;
+
+        this._conditionalTokens = new ConditionalTokensRepo(provider, conditionalTokensAddress);
+    }
+
+    getPoolTokenBalances = async (): Promise<BigNumber[]> => {
+        const balances = [];
+        for (const outcome of this.outcomes) {
+            let bal = await this._conditionalTokens.getBalance(
+                this.marketMakerAddress,
+                outcome.positionId
+            );
+            balances.push(bal);
+        }
+        return balances;
+    };
+
+    getCurrentOdds = async (): Promise<number[]> => {
+        const balancesRaw = await this.getPoolTokenBalances();
+        const balances = balancesRaw.map((i: BigNumber) => utils.formatEther(i));
+
+        const oddsWeight: number[] = [];
+        for (let i = 0; i < balances.length; i++) {
+            const bf = balances.filter((item: string, index: number) => index != i);
+            const bm = bf.map((item: string) => Number(item));
+            const br = bm.reduce((acc = 1, item: number) => (acc *= item));
+            oddsWeight.push(br);
+        }
+        const oddsWeightSum = oddsWeight.reduce((acc = 0, item: number) => (acc += item));
+        const odds = oddsWeight.map((item: number) => item / oddsWeightSum);
+        return odds;
+    };
 }

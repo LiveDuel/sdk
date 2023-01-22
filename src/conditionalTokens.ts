@@ -1,4 +1,5 @@
-import { BigNumber, BigNumberish, ethers, Signer } from "ethers";
+import { ethers, BigNumber, Signer, ContractTransaction } from "ethers";
+import { Provider } from "@ethersproject/abstract-provider";
 import { ConditionalTokens, ConditionalTokens__factory } from "./contracts";
 
 export interface ConditionalTokensRepoInterface {
@@ -26,6 +27,7 @@ export interface ConditionalTokensRepoInterface {
 
 export class ConditionalTokensRepo implements ConditionalTokensRepoInterface {
     /* PRIVATE PROPERTIES */
+    private readonly _signerOrProvider: Signer | Provider;
     private readonly _contract: ConditionalTokens;
 
     /* PUBLIC PROPERTIES */
@@ -33,8 +35,9 @@ export class ConditionalTokensRepo implements ConditionalTokensRepoInterface {
         return this._contract.address;
     }
 
-    constructor(signer: Signer, conditionalTokensAddress: string) {
-        this._contract = ConditionalTokens__factory.connect(conditionalTokensAddress, signer);
+    constructor(signerOrProvider: Signer | Provider, conditionalTokensAddress: string) {
+        this._signerOrProvider = signerOrProvider;
+        this._contract = ConditionalTokens__factory.connect(conditionalTokensAddress, signerOrProvider);
         if (!this._contract.address) {
             throw new Error("Error connecting to ConditionalTokens contract.");
         }
@@ -77,7 +80,10 @@ export class ConditionalTokensRepo implements ConditionalTokensRepoInterface {
     setApprovalForAll = async (
         operatorAddress: string,
         approved: boolean
-    ): Promise<ethers.ContractTransaction> => {
+    ): Promise<ContractTransaction> => {
+        if (this._signerOrProvider instanceof Provider) {
+            throw new Error("provider cannot send transactions ");
+        }
         return this._contract.setApprovalForAll(operatorAddress, approved, {
             gasLimit: ethers.BigNumber.from(1e6), //[LEM] gasLimit
         });

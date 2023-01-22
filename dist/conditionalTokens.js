@@ -11,13 +11,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ConditionalTokensRepo = void 0;
 const ethers_1 = require("ethers");
+const abstract_provider_1 = require("@ethersproject/abstract-provider");
 const contracts_1 = require("./contracts");
 class ConditionalTokensRepo {
     /* PUBLIC PROPERTIES */
     get address() {
         return this._contract.address;
     }
-    constructor(signer, conditionalTokensAddress) {
+    constructor(signerOrProvider, conditionalTokensAddress) {
         this.createCondition = (oracle, questionId, numOutcomes) => __awaiter(this, void 0, void 0, function* () {
             let { events } = yield this._contract
                 .prepareCondition(oracle, questionId, numOutcomes, {
@@ -44,6 +45,9 @@ class ConditionalTokensRepo {
             return this._contract.isApprovedForAll(account, operatorAddress);
         });
         this.setApprovalForAll = (operatorAddress, approved) => __awaiter(this, void 0, void 0, function* () {
+            if (this._signerOrProvider instanceof abstract_provider_1.Provider) {
+                throw new Error("provider cannot send transactions ");
+            }
             return this._contract.setApprovalForAll(operatorAddress, approved, {
                 gasLimit: ethers_1.ethers.BigNumber.from(1e6), //[LEM] gasLimit
             });
@@ -55,7 +59,8 @@ class ConditionalTokensRepo {
             const positionId = yield this._contract.getPositionId(collateralAddress, collectionId);
             return positionId.toString();
         });
-        this._contract = contracts_1.ConditionalTokens__factory.connect(conditionalTokensAddress, signer);
+        this._signerOrProvider = signerOrProvider;
+        this._contract = contracts_1.ConditionalTokens__factory.connect(conditionalTokensAddress, signerOrProvider);
         if (!this._contract.address) {
             throw new Error("Error connecting to ConditionalTokens contract.");
         }
