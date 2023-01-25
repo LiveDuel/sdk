@@ -109,7 +109,7 @@ class Market {
     /**
      * Safely initializes the Market class instance to be used by clients/traders.
      * @param signer Signer to use to deploy market
-     * @param marketMakerAddress Address of the deployed LMSRMarketMaker contract
+     * @param marketMakerAddress Address of the deployed FixedProductMarketMaker contract
      * @param conditionalTokensAddress Address of the deployed ConditionalTokens contract
      * @param collateralAddress Address of the collateral token contract
      * @param oracle Address of the oracle to use. Defaults to address of signer
@@ -137,14 +137,14 @@ class MarketAdmin {
      * @param signer Signer to use to deploy market
      * @param collateralAddress Address of the collateral token contract
      * @param conditionalTokensAddress Address of the deployed ConditionalTokens contract
-     * @param marketMakerFactoryAddress Address of the deployed LMSRMarketMakerFactory contract
+     * @param marketMakerFactoryAddress Address of the deployed FixedProductMarketMakerFactory contract
      * @param oracle Address of the oracle to use. Defaults to address of signer
      * @param questionId questionId used to create the market
      * @param outcomes Array of outcome objects
      * @param fee fee (uint64)
      * @param funding initial funding provided to the market
      * @param initialOdds: initial odds for outcomes of the market
-     * @returns [conditionId, lmsrmmAddress]
+     * @returns [conditionId, fpmmAddress, positionId[]]
      */
     static createMarket(signer, collateralAddress, conditionalTokensAddress, marketMakerFactoryAddress, oracle, questionId, outcomes, fee, funding, initialOdds) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -155,6 +155,12 @@ class MarketAdmin {
                 // `prepareCondition` & set up `FixedProductMarketMaker`
                 const conditionId = yield ctRepo.createCondition(oracle, questionId, outcomes.length);
                 const fpmmAddress = yield fpmmFactoryRepo.createFPMarketMaker(collateralAddress, conditionalTokensAddress, conditionId, fee);
+                // calculate token positionIds
+                let positionIds = [];
+                for (let outcomeI = 0; outcomeI < outcomes.length; outcomeI++) {
+                    const positionId = yield ctRepo.getPositionId(collateralAddress, conditionId, outcomeI);
+                    positionIds.push(positionId);
+                }
                 // approve collateral and fund FixedProductMarketMaker
                 const fpmmRepo = yield fpmm_1.MarketMakerRepo.initialize(signer, fpmmAddress, conditionalTokensAddress, collateralAddress);
                 let trx1 = yield fpmmRepo.setCollateralApproval(funding);
@@ -165,7 +171,8 @@ class MarketAdmin {
                 console.log("[INFO] Market Creator Address: ", account);
                 console.log("[INFO] Created Condition ID:   ", conditionId);
                 console.log("[INFO] FPMarketMaker Address:  ", fpmmAddress);
-                return [conditionId, fpmmAddress];
+                console.log("[INFO] Token position IDs: ", positionIds);
+                return [conditionId, fpmmAddress, positionIds];
             }
             catch (error) {
                 throw error;
