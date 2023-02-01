@@ -19,7 +19,7 @@ class Market {
             const account = yield this._signer.getAddress();
             const balances = [];
             for (const outcome of this.outcomes) {
-                let bal = yield this._marketMaker.getConditionalTokenBalance(account, outcome.positionId);
+                let bal = yield this._marketMaker.getConditionalTokenBalance(account, outcome.position_id);
                 balances.push(bal);
             }
             return balances;
@@ -27,7 +27,7 @@ class Market {
         this.getPoolTokenBalances = () => __awaiter(this, void 0, void 0, function* () {
             const balances = [];
             for (const outcome of this.outcomes) {
-                let bal = yield this._marketMaker.getConditionalTokenBalance(this._marketMaker.contractAddress, outcome.positionId);
+                let bal = yield this._marketMaker.getConditionalTokenBalance(this._marketMaker.contractAddress, outcome.position_id);
                 balances.push(bal);
             }
             return balances;
@@ -79,7 +79,7 @@ class Market {
                 //[LEM] Temp
                 const MAXTOKENS = "1" + "0".repeat(22);
                 const account = yield this._signer.getAddress();
-                const outcomeTokenBalance = yield this._marketMaker.getConditionalTokenBalance(account, this.outcomes[outcomeIndex].positionId);
+                const outcomeTokenBalance = yield this._marketMaker.getConditionalTokenBalance(account, this.outcomes[outcomeIndex].position_id);
                 const outcomeTokensToSell = yield this._marketMaker.calcSellTokens(amountReturn, outcomeIndex);
                 //[LEM] slippage not considered (outcomeTokensToSell + slippage%OfTokens)
                 if (outcomeTokensToSell.gt(outcomeTokenBalance)) {
@@ -186,7 +186,7 @@ class MarketWatcher {
         this.getPoolTokenBalances = () => __awaiter(this, void 0, void 0, function* () {
             const balances = [];
             for (const outcome of this.outcomes) {
-                let bal = yield this._conditionalTokens.getBalance(this.marketMakerAddress, outcome.positionId);
+                let bal = yield this._conditionalTokens.getBalance(this.marketMakerAddress, outcome.position_id);
                 balances.push(bal);
             }
             return balances;

@@ -98,7 +98,7 @@ export class Market implements MarketInterface {
 
         const balances = [];
         for (const outcome of this.outcomes) {
-            let bal = await this._marketMaker.getConditionalTokenBalance(account, outcome.positionId);
+            let bal = await this._marketMaker.getConditionalTokenBalance(account, outcome.position_id);
             balances.push(bal);
         }
         return balances;
@@ -109,7 +109,7 @@ export class Market implements MarketInterface {
         for (const outcome of this.outcomes) {
             let bal = await this._marketMaker.getConditionalTokenBalance(
                 this._marketMaker.contractAddress,
-                outcome.positionId
+                outcome.position_id
             );
             balances.push(bal);
         }
@@ -180,7 +180,7 @@ export class Market implements MarketInterface {
 
             const outcomeTokenBalance = await this._marketMaker.getConditionalTokenBalance(
                 account,
-                this.outcomes[outcomeIndex].positionId
+                this.outcomes[outcomeIndex].position_id
             );
             const outcomeTokensToSell = await this._marketMaker.calcSellTokens(
                 amountReturn,
@@ -367,7 +367,7 @@ export class MarketWatcher implements MarketWatcherInterface {
         for (const outcome of this.outcomes) {
             let bal = await this._conditionalTokens.getBalance(
                 this.marketMakerAddress,
-                outcome.positionId
+                outcome.position_id
             );
             balances.push(bal);
         }

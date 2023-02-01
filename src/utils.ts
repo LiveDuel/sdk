@@ -1,4 +1,4 @@
 export interface Outcome {
-    positionId: string;
+    position_id: string;
     [otherProperties: string]: unknown;
 }
