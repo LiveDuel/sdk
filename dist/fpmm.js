@@ -101,6 +101,9 @@ class MarketMakerRepo {
         this.sell = (amountReturn, outcomeIndex, maxOutcomeTokensToSell) => __awaiter(this, void 0, void 0, function* () {
             return this._contract.sell(amountReturn, outcomeIndex, maxOutcomeTokensToSell);
         });
+        this.redeem = (conditionId) => __awaiter(this, void 0, void 0, function* () {
+            return this._conditionalTokens.redeemPositions(this.collateralAddress, conditionId);
+        });
         this._conditionalTokens = new conditionalTokens_1.ConditionalTokensRepo(signer, conditionalTokensAddress);
         this._contract = contracts_1.FixedProductMarketMaker__factory.connect(marketMakerAddress, signer);
         this._collateral = contracts_1.ERC20__factory.connect(collateralAddress, signer);

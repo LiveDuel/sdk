@@ -117,6 +117,8 @@ export interface MarketMakerRepoInterface {
         maxOutcomeTokensToSell: BigNumberish
     ) => Promise<ContractTransaction>;
 
+    redeem: (conditionId: string) => Promise<ContractTransaction>;
+
     /* FEE METHODS */
     // getWithdrawableFeeAmount: (account: string) => Promise<BigNumber>;
 
@@ -233,6 +235,10 @@ export class MarketMakerRepo implements MarketMakerRepoInterface {
         maxOutcomeTokensToSell: BigNumberish
     ): Promise<ContractTransaction> => {
         return this._contract.sell(amountReturn, outcomeIndex, maxOutcomeTokensToSell);
+    };
+
+    redeem = async (conditionId: string): Promise<ContractTransaction> => {
+        return this._conditionalTokens.redeemPositions(this.collateralAddress, conditionId);
     };
 
     /* FEE METHODS */

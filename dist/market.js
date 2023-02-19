@@ -97,6 +97,14 @@ class Market {
                 throw error;
             }
         });
+        this.redeem = () => __awaiter(this, void 0, void 0, function* () {
+            try {
+                return yield this._marketMaker.redeem(this.conditionId);
+            }
+            catch (error) {
+                throw error;
+            }
+        });
         this._signer = signer;
         this._oracle = oracle;
         this._marketMaker = marketMaker;
@@ -130,8 +138,29 @@ exports.Market = Market;
 class MarketAdmin {
     //pause
     //resume
-    //resolve-reportPayouts
     //withdrawFee
+    /**
+     * Creates a market and a market maker for the specified market details.
+     * @param signer Signer to use to deploy market
+     * @param conditionalTokensAddress Address of the deployed ConditionalTokens contract
+     * @param questionId questionId used to create the market
+     * @param payouts: payout vector to report winner (eg: [0,1,0])
+     * @returns ContractTransaction object
+     */
+    static resolveMarket(signer, conditionalTokensAddress, questionId, payouts) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const ctRepo = new conditionalTokens_1.ConditionalTokensRepo(signer, conditionalTokensAddress);
+                let trx1 = yield ctRepo.reportPayouts(questionId, payouts);
+                yield trx1.wait();
+                console.log("[INFO] Market resolved with payouts: ", payouts);
+                return trx1;
+            }
+            catch (error) {
+                throw error;
+            }
+        });
+    }
     /**
      * Creates a market and a market maker for the specified market details.
      * @param signer Signer to use to deploy market

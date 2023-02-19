@@ -23,12 +23,20 @@ export interface ConditionalTokensRepoInterface {
         conditionId: string,
         outcomeIndex: number
     ) => Promise<string>;
+
+    reportPayouts: (questionId: string, payouts: number[]) => Promise<ContractTransaction>;
+
+    redeemPositions: (collateralAddress: string, conditionId: string) => Promise<ContractTransaction>;
 }
 
 export class ConditionalTokensRepo implements ConditionalTokensRepoInterface {
     /* PRIVATE PROPERTIES */
     private readonly _signerOrProvider: Signer | Provider;
+    private readonly _usingProvider: boolean;
     private readonly _contract: ConditionalTokens;
+
+    private readonly INDEX_SETS = [1, 2, 4];
+    private readonly PARENT_COLLECTION_ID = "0x" + "0".repeat(64);
 
     /* PUBLIC PROPERTIES */
     get address() {
@@ -37,6 +45,7 @@ export class ConditionalTokensRepo implements ConditionalTokensRepoInterface {
 
     constructor(signerOrProvider: Signer | Provider, conditionalTokensAddress: string) {
         this._signerOrProvider = signerOrProvider;
+        this._usingProvider = this._signerOrProvider instanceof Provider ? true : false;
         this._contract = ConditionalTokens__factory.connect(conditionalTokensAddress, signerOrProvider);
         if (!this._contract.address) {
             throw new Error("Error connecting to ConditionalTokens contract.");
@@ -81,9 +90,8 @@ export class ConditionalTokensRepo implements ConditionalTokensRepoInterface {
         operatorAddress: string,
         approved: boolean
     ): Promise<ContractTransaction> => {
-        if (this._signerOrProvider instanceof Provider) {
-            throw new Error("provider cannot send transactions ");
-        }
+        if (this._usingProvider) throw new Error("provider cannot send transactions ");
+
         return this._contract.setApprovalForAll(operatorAddress, approved, {
             gasLimit: ethers.BigNumber.from(1e6), //[LEM] gasLimit
         });
@@ -94,15 +102,32 @@ export class ConditionalTokensRepo implements ConditionalTokensRepoInterface {
         conditionId: string,
         outcomeIndex: number
     ): Promise<string> => {
-        const INDEX_SETS = [1, 2, 4];
-        const PARENT_COLLECTION_ID = "0x" + "0".repeat(64);
-
         const collectionId = await this._contract.getCollectionId(
-            PARENT_COLLECTION_ID,
+            this.PARENT_COLLECTION_ID,
             conditionId,
-            INDEX_SETS[outcomeIndex]
+            this.INDEX_SETS[outcomeIndex]
         );
         const positionId = await this._contract.getPositionId(collateralAddress, collectionId);
         return positionId.toString();
+    };
+
+    reportPayouts = async (questionId: string, payouts: number[]): Promise<ContractTransaction> => {
+        if (this._usingProvider) throw new Error("provider cannot send transactions ");
+
+        return this._contract.reportPayouts(questionId, payouts);
+    };
+
+    redeemPositions = async (
+        collateralAddress: string,
+        conditionId: string
+    ): Promise<ContractTransaction> => {
+        if (this._usingProvider) throw new Error("provider cannot send transactions ");
+
+        return this._contract.redeemPositions(
+            collateralAddress,
+            this.PARENT_COLLECTION_ID,
+            conditionId,
+            this.INDEX_SETS
+        );
     };
 }

@@ -56,9 +56,7 @@ export interface MarketInterface {
 
     // removeLiquidity: (amount: number) => Promise<>;
 
-    // priceHistory: (length: number) => Promise<>;
-
-    // volumeHistory: (length: number) => Promise<>;
+    redeem: () => Promise<ContractTransaction>;
 }
 
 export class Market implements MarketInterface {
@@ -203,6 +201,14 @@ export class Market implements MarketInterface {
         }
     };
 
+    redeem = async (): Promise<ContractTransaction> => {
+        try {
+            return await this._marketMaker.redeem(this.conditionId);
+        } catch (error) {
+            throw error;
+        }
+    };
+
     /**
      * Safely initializes the Market class instance to be used by clients/traders.
      * @param signer Signer to use to deploy market
@@ -250,8 +256,33 @@ export class Market implements MarketInterface {
 export class MarketAdmin {
     //pause
     //resume
-    //resolve-reportPayouts
     //withdrawFee
+
+    /**
+     * Creates a market and a market maker for the specified market details.
+     * @param signer Signer to use to deploy market
+     * @param conditionalTokensAddress Address of the deployed ConditionalTokens contract
+     * @param questionId questionId used to create the market
+     * @param payouts: payout vector to report winner (eg: [0,1,0])
+     * @returns ContractTransaction object
+     */
+    static async resolveMarket(
+        signer: Signer,
+        conditionalTokensAddress: string,
+        questionId: string,
+        payouts: number[]
+    ): Promise<ContractTransaction> {
+        try {
+            const ctRepo = new ConditionalTokensRepo(signer, conditionalTokensAddress);
+            let trx1 = await ctRepo.reportPayouts(questionId, payouts);
+            await trx1.wait();
+
+            console.log("[INFO] Market resolved with payouts: ", payouts);
+            return trx1;
+        } catch (error) {
+            throw error;
+        }
+    }
 
     /**
      * Creates a market and a market maker for the specified market details.
