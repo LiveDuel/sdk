@@ -19,6 +19,8 @@ class ConditionalTokensRepo {
         return this._contract.address;
     }
     constructor(signerOrProvider, conditionalTokensAddress) {
+        this.INDEX_SETS = [1, 2, 4];
+        this.PARENT_COLLECTION_ID = "0x" + "0".repeat(64);
         this.createCondition = (oracle, questionId, numOutcomes) => __awaiter(this, void 0, void 0, function* () {
             let { events } = yield this._contract
                 .prepareCondition(oracle, questionId, numOutcomes, {
@@ -45,21 +47,29 @@ class ConditionalTokensRepo {
             return this._contract.isApprovedForAll(account, operatorAddress);
         });
         this.setApprovalForAll = (operatorAddress, approved) => __awaiter(this, void 0, void 0, function* () {
-            if (this._signerOrProvider instanceof abstract_provider_1.Provider) {
+            if (this._usingProvider)
                 throw new Error("provider cannot send transactions ");
-            }
             return this._contract.setApprovalForAll(operatorAddress, approved, {
                 gasLimit: ethers_1.ethers.BigNumber.from(1e6), //[LEM] gasLimit
             });
         });
         this.getPositionId = (collateralAddress, conditionId, outcomeIndex) => __awaiter(this, void 0, void 0, function* () {
-            const INDEX_SETS = [1, 2, 4];
-            const PARENT_COLLECTION_ID = "0x" + "0".repeat(64);
-            const collectionId = yield this._contract.getCollectionId(PARENT_COLLECTION_ID, conditionId, INDEX_SETS[outcomeIndex]);
+            const collectionId = yield this._contract.getCollectionId(this.PARENT_COLLECTION_ID, conditionId, this.INDEX_SETS[outcomeIndex]);
             const positionId = yield this._contract.getPositionId(collateralAddress, collectionId);
             return positionId.toString();
         });
+        this.reportPayouts = (questionId, payouts) => __awaiter(this, void 0, void 0, function* () {
+            if (this._usingProvider)
+                throw new Error("provider cannot send transactions ");
+            return this._contract.reportPayouts(questionId, payouts);
+        });
+        this.redeemPositions = (collateralAddress, conditionId) => __awaiter(this, void 0, void 0, function* () {
+            if (this._usingProvider)
+                throw new Error("provider cannot send transactions ");
+            return this._contract.redeemPositions(collateralAddress, this.PARENT_COLLECTION_ID, conditionId, this.INDEX_SETS);
+        });
         this._signerOrProvider = signerOrProvider;
+        this._usingProvider = this._signerOrProvider instanceof abstract_provider_1.Provider ? true : false;
         this._contract = contracts_1.ConditionalTokens__factory.connect(conditionalTokensAddress, signerOrProvider);
         if (!this._contract.address) {
             throw new Error("Error connecting to ConditionalTokens contract.");
