@@ -9,7 +9,7 @@ export interface MarketInterface {
     readonly collateralAddress: string;
     readonly conditionId: string;
     readonly questionId: string;
-    readonly outcomes: Outcome[];
+    readonly outcomes: [Outcome, Outcome, Outcome];
     readonly fee: BigNumberish;
 
     getUserTokenBalances: () => Promise<BigNumber[]>;
@@ -67,7 +67,7 @@ export class Market implements MarketInterface {
     readonly collateralAddress: string;
     readonly conditionId: string;
     readonly questionId: string;
-    readonly outcomes: Outcome[];
+    readonly outcomes: [Outcome, Outcome, Outcome];
     readonly fee: BigNumberish;
 
     constructor(
@@ -76,7 +76,7 @@ export class Market implements MarketInterface {
         collateralAddress: string,
         conditionId: string,
         questionId: string,
-        outcomes: Outcome[],
+        outcomes: [Outcome, Outcome, Outcome],
         fee: BigNumberish,
         marketMaker: MarketMakerRepo
     ) {
@@ -230,7 +230,7 @@ export class Market implements MarketInterface {
         oracle: string,
         conditionId: string,
         questionId: string,
-        outcomes: Outcome[],
+        outcomes: [Outcome, Outcome, Outcome],
         fee: BigNumberish
     ): Promise<Market> {
         const fpmmRepo: MarketMakerRepo = await MarketMakerRepo.initialize(
@@ -305,10 +305,10 @@ export class MarketAdmin {
         marketMakerFactoryAddress: string,
         oracle: string,
         questionId: string,
-        outcomes: Outcome[],
+        outcomes: [Outcome, Outcome, Outcome],
         fee: BigNumberish,
         funding: BigNumberish,
-        initialOdds: number[]
+        initialOdds: [number, number, number]
     ): Promise<[string, string, string[]]> {
         try {
             // init
@@ -361,7 +361,7 @@ export interface MarketWatcherInterface {
     readonly conditionId: string;
     readonly marketMakerAddress: string;
     readonly conditionalTokensAddress: string;
-    readonly outcomes: Outcome[];
+    readonly outcomes: [Outcome, Outcome, Outcome];
 
     getPoolTokenBalances: () => Promise<BigNumber[]>;
 
@@ -375,14 +375,14 @@ export class MarketWatcher implements MarketWatcherInterface {
     readonly conditionId: string;
     readonly marketMakerAddress: string;
     readonly conditionalTokensAddress: string;
-    readonly outcomes: Outcome[];
+    readonly outcomes: [Outcome, Outcome, Outcome];
 
     constructor(
         provider: Provider,
         marketMakerAddress: string,
         conditionalTokensAddress: string,
         conditionId: string,
-        outcomes: Outcome[]
+        outcomes: [Outcome, Outcome, Outcome]
     ) {
         this.provider = provider;
         this.marketMakerAddress = marketMakerAddress;
