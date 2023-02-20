@@ -85,8 +85,16 @@ class MarketMakerRepo {
         });
         /* MARKET METHODS */
         this.addLiquidityInitial = (amount, initialOdds) => __awaiter(this, void 0, void 0, function* () {
-            //[LEM] calculate distHint using odds
-            const distHint = initialOdds;
+            if (initialOdds.length > 3 || initialOdds.length < 3)
+                throw new Error("Only 3 outcomes supported right now");
+            const calcDistHint = (odds) => {
+                const [O1, O2, O3] = odds;
+                let D1 = 1;
+                let D2 = (O1 * D1) / O2;
+                let D3 = (O1 * D1) / O3;
+                return [D1, D2, D3].map((v) => ethers_1.ethers.utils.parseEther(v.toString()));
+            };
+            const distHint = calcDistHint(initialOdds);
             return this._contract.addFunding(amount, distHint);
         });
         this.calcBuyTokens = (amountInvest, outcomeIndex) => __awaiter(this, void 0, void 0, function* () {
