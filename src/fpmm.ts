@@ -123,9 +123,9 @@ export interface MarketMakerRepoInterface {
     redeem: (conditionId: string) => Promise<ContractTransaction>;
 
     /* FEE METHODS */
-    // getWithdrawableFeeAmount: (account: string) => Promise<BigNumber>;
+    getWithdrawableFeeAmount: (account: string) => Promise<BigNumber>;
 
-    // withdrawFeeAmount: () => Promise<ContractTransaction>;
+    withdrawFeeAmount: () => Promise<ContractTransaction>;
 }
 
 export class MarketMakerRepo implements MarketMakerRepoInterface {
@@ -255,7 +255,14 @@ export class MarketMakerRepo implements MarketMakerRepoInterface {
     };
 
     /* FEE METHODS */
+    getWithdrawableFeeAmount = async (account: string): Promise<BigNumber> => {
+        return this._contract.feesWithdrawableBy(account);
+    };
 
+    withdrawFeeAmount = async (): Promise<ContractTransaction> => {
+        const accountAddress = await this._contract.signer.getAddress();
+        return this._contract.withdrawFees(accountAddress);
+    };
     /**
      * Safely initializes the MarketMakerRepo class checking if the collateralAddress mentioned
      * is the same collateral used by the market.

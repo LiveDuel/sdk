@@ -112,6 +112,14 @@ class MarketMakerRepo {
         this.redeem = (conditionId) => __awaiter(this, void 0, void 0, function* () {
             return this._conditionalTokens.redeemPositions(this.collateralAddress, conditionId);
         });
+        /* FEE METHODS */
+        this.getWithdrawableFeeAmount = (account) => __awaiter(this, void 0, void 0, function* () {
+            return this._contract.feesWithdrawableBy(account);
+        });
+        this.withdrawFeeAmount = () => __awaiter(this, void 0, void 0, function* () {
+            const accountAddress = yield this._contract.signer.getAddress();
+            return this._contract.withdrawFees(accountAddress);
+        });
         this._conditionalTokens = new conditionalTokens_1.ConditionalTokensRepo(signer, conditionalTokensAddress);
         this._contract = contracts_1.FixedProductMarketMaker__factory.connect(marketMakerAddress, signer);
         this._collateral = contracts_1.ERC20__factory.connect(collateralAddress, signer);
@@ -121,7 +129,6 @@ class MarketMakerRepo {
                  Collateral: ${this._collateral.address}`);
         }
     }
-    /* FEE METHODS */
     /**
      * Safely initializes the MarketMakerRepo class checking if the collateralAddress mentioned
      * is the same collateral used by the market.
