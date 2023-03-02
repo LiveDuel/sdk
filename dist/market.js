@@ -136,9 +136,23 @@ class Market {
 }
 exports.Market = Market;
 class MarketAdmin {
+    //[LEM] pending methods
     //pause
     //resume
-    //withdrawFee
+    /**
+     * Allows the liquidity provider (admin) to withdraw their fee after market is closed.
+     * @param signer Signer to use to deploy market
+     * @param marketMakerAddress Address of the deployed FixedProductMarketMaker contract
+     * @param conditionalTokensAddress Address of the deployed ConditionalTokens contract
+     * @param collateralAddress Address of the collateral token contract
+     * @returns ContractTransaction object
+     */
+    static withdrawLPFees(signer, marketMakerAddress, conditionalTokensAddress, collateralAddress) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const fpmmRepo = yield fpmm_1.MarketMakerRepo.initialize(signer, marketMakerAddress, conditionalTokensAddress, collateralAddress);
+            return fpmmRepo.withdrawFeeAmount();
+        });
+    }
     /**
      * Creates a market and a market maker for the specified market details.
      * @param signer Signer to use to deploy market
