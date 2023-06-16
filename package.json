@@ -28,9 +28,6 @@
     },
     "scripts": {
         "test": "mocha -r ts-node/register test/*.ts",
-        "build": "tsc -p .",
-        "deploy": "TEST=true ts-node scripts/deploy-market.ts",
-        "compile": "typechain --target ethers-v5 --glob './artifacts/**/*.json' --out-dir src/contracts",
-        "endpoint": "ts-node scripts/provider.ts"
+        "build": "tsc -p ."
     }
 }
