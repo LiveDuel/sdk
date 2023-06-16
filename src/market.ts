@@ -274,7 +274,7 @@ export class Market implements MarketInterface {
                 this.OPTIM_CONSTANTS.slopeXOffset,
                 outcomeIndex
             );
-            // Update the investment amount
+            // Update the return amount
             const offset = diff.div(slope).div(alphaInv);
             retAmt = retAmt.sub(offset);
 
