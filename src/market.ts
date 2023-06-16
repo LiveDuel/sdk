@@ -1,16 +1,33 @@
 import _ from "lodash";
+import { BigNumber as BN } from "bignumber.js";
 import { ethers, BigNumber, BigNumberish, Signer, utils, ContractTransaction } from "ethers";
 import { Provider } from "@ethersproject/abstract-provider";
 import { ConditionalTokensRepo } from "./conditionalTokens";
 import { MarketMakerRepo, MarketMakerFactoryRepo } from "./fpmm";
 import { Outcome } from "./utils";
 
+declare module "ethers" {
+    export interface BigNumber {
+        ceildiv(divisor: BigNumber): BigNumber;
+    }
+}
+
+BigNumber.prototype.ceildiv = function (divisor: BigNumber) {
+    const quotient = this.div(divisor);
+    const remainder = this.mod(divisor);
+    if (remainder.isZero()) {
+        return quotient;
+    } else {
+        return quotient.add(1);
+    }
+};
+
 export interface MarketInterface {
     readonly collateralAddress: string;
     readonly conditionId: string;
     readonly questionId: string;
     readonly outcomes: [Outcome, Outcome, Outcome];
-    readonly fee: BigNumberish;
+    readonly fee: BigNumber;
 
     getUserTokenBalances: () => Promise<BigNumber[]>;
 
@@ -18,13 +35,25 @@ export interface MarketInterface {
 
     getCurrentOdds: () => Promise<number[]>;
 
-    calcBuyTokens: (amountInvest: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
+    calcBuyTokens_RPC: (amountInvest: BigNumber, outcomeIndex: number) => Promise<BigNumber>;
 
-    calcSellTokens: (amountReturn: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
+    calcSellTokens_RPC: (amountReturn: BigNumber, outcomeIndex: number) => Promise<BigNumber>;
 
-    // calcBuyAmount: (tokenAmountBuy: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
+    calcBuyTokens: (
+        amountInvest: BigNumber,
+        outcomeIndex: number,
+        poolBalances?: BigNumber[]
+    ) => Promise<BigNumber>;
 
-    // calcSellAmount: (tokenAmountSell: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
+    calcSellTokens: (
+        amountReturn: BigNumber,
+        outcomeIndex: number,
+        poolBalances?: BigNumber[]
+    ) => Promise<BigNumber>;
+
+    calcBuyAmount: (tokenAmountBuy: BigNumber, outcomeIndex: number) => Promise<BigNumber>;
+
+    calcSellAmount: (tokenAmountSell: BigNumber, outcomeIndex: number) => Promise<BigNumber>;
 
     /**
      * Buy a quantity of tokens
@@ -34,7 +63,7 @@ export interface MarketInterface {
      * @returns Promise which resolves to a transaction
      */
     buy: (
-        amountInvest: BigNumberish,
+        amountInvest: BigNumber,
         outcomeIndex: number,
         slippage: number
     ) => Promise<ContractTransaction>;
@@ -47,7 +76,7 @@ export interface MarketInterface {
      * @returns Promise which resolves to a transaction
      */
     sell: (
-        amountReturn: BigNumberish,
+        amountReturn: BigNumber,
         outcomeIndex: number,
         slippage: number
     ) => Promise<ContractTransaction>;
@@ -64,11 +93,19 @@ export class Market implements MarketInterface {
     private readonly _oracle: string;
     private readonly _marketMaker: MarketMakerRepo;
 
+    private readonly ONE: BigNumber = ethers.constants.WeiPerEther;
+    private readonly OPTIM_CONSTANTS = {
+        alpha: 0.1,
+        maxIterations: 1000,
+        slopeXOffset: 0.001,
+        tolerance: BigNumber.from(BN(1e6).toString()),
+    };
+
     readonly collateralAddress: string;
     readonly conditionId: string;
     readonly questionId: string;
     readonly outcomes: [Outcome, Outcome, Outcome];
-    readonly fee: BigNumberish;
+    readonly fee: BigNumber;
 
     constructor(
         signer: Signer,
@@ -77,7 +114,7 @@ export class Market implements MarketInterface {
         conditionId: string,
         questionId: string,
         outcomes: [Outcome, Outcome, Outcome],
-        fee: BigNumberish,
+        fee: BigNumber,
         marketMaker: MarketMakerRepo
     ) {
         this._signer = signer;
@@ -130,18 +167,147 @@ export class Market implements MarketInterface {
         return odds;
     };
 
-    calcBuyTokens = async (amountInvest: BigNumberish, outcomeIndex: number): Promise<BigNumber> => {
+    calcBuyTokens_RPC = async (amountInvest: BigNumber, outcomeIndex: number): Promise<BigNumber> => {
         return this._marketMaker.calcBuyTokens(amountInvest, outcomeIndex);
     };
 
-    calcSellTokens = async (amountReturn: BigNumberish, outcomeIndex: number): Promise<BigNumber> => {
+    calcSellTokens_RPC = async (amountReturn: BigNumber, outcomeIndex: number): Promise<BigNumber> => {
         return this._marketMaker.calcSellTokens(amountReturn, outcomeIndex);
+    };
+
+    calcBuyTokens = async (
+        amountInvest: BigNumber,
+        outcomeIndex: number,
+        poolBalances?: BigNumber[]
+    ): Promise<BigNumber> => {
+        const balances = poolBalances ? poolBalances : await this.getPoolTokenBalances();
+        const buyTokenPoolBalance = balances[outcomeIndex];
+        const investmentAmountMinusFees = amountInvest.sub(amountInvest.mul(this.fee).div(this.ONE));
+
+        let endingOutcomeBalance = buyTokenPoolBalance.mul(this.ONE);
+        for (let i = 0; i < balances.length; i++) {
+            if (i != outcomeIndex) {
+                const poolBalance = balances[i];
+                endingOutcomeBalance = endingOutcomeBalance
+                    .mul(poolBalance)
+                    .ceildiv(poolBalance.add(investmentAmountMinusFees));
+            }
+        }
+        const tokenBuyAmount = buyTokenPoolBalance
+            .add(investmentAmountMinusFees)
+            .sub(endingOutcomeBalance.ceildiv(this.ONE));
+
+        return tokenBuyAmount;
+    };
+
+    calcSellTokens = async (
+        amountReturn: BigNumber,
+        outcomeIndex: number,
+        poolBalances?: BigNumber[]
+    ): Promise<BigNumber> => {
+        const balances = poolBalances ? poolBalances : await this.getPoolTokenBalances();
+        const sellTokenPoolBalance = balances[outcomeIndex];
+        const returnAmountPlusFees = amountReturn.mul(this.ONE).div(this.ONE.sub(this.fee));
+
+        let endingOutcomeBalance = sellTokenPoolBalance.mul(this.ONE);
+        for (let i = 0; i < balances.length; i++) {
+            if (i != outcomeIndex) {
+                const poolBalance = balances[i];
+                endingOutcomeBalance = endingOutcomeBalance
+                    .mul(poolBalance)
+                    .ceildiv(poolBalance.sub(returnAmountPlusFees));
+            }
+        }
+        const tokenSellAmt = returnAmountPlusFees
+            .add(endingOutcomeBalance.ceildiv(this.ONE))
+            .sub(sellTokenPoolBalance);
+
+        return tokenSellAmt;
+    };
+
+    calcBuyAmount = async (tokenAmountBuy: BigNumber, outcomeIndex: number): Promise<BigNumber> => {
+        const balances = await this.getPoolTokenBalances();
+        const alphaInv = BigNumber.from(1 / this.OPTIM_CONSTANTS.alpha);
+
+        // starting collateral amount
+        let invAmt = BigNumber.from(BN(1e18).toString());
+
+        for (let counter = 0; counter < this.OPTIM_CONSTANTS.maxIterations; counter++) {
+            // calc output, difference to expected value, slope
+            const calculatedTokenBuyAmount = await this.calcBuyTokens(invAmt, outcomeIndex, balances);
+            const diff = calculatedTokenBuyAmount.sub(tokenAmountBuy);
+            const slope = await this.calcForwardMethodSlope(
+                this.calcBuyTokens,
+                balances,
+                invAmt,
+                this.OPTIM_CONSTANTS.slopeXOffset,
+                outcomeIndex
+            );
+            // Update the investment amount
+            const offset = diff.div(slope).div(alphaInv);
+            invAmt = invAmt.sub(offset);
+
+            // Check for convergence
+            if (diff.abs().lte(this.OPTIM_CONSTANTS.tolerance)) {
+                break;
+            }
+        }
+
+        return invAmt;
+    };
+
+    calcSellAmount = async (tokenAmountSell: BigNumber, outcomeIndex: number): Promise<BigNumber> => {
+        const balances = await this.getPoolTokenBalances();
+        const alphaInv = BigNumber.from(1 / this.OPTIM_CONSTANTS.alpha);
+
+        // starting collateral amount
+        let retAmt = BigNumber.from(BN(1e18).toString()); // Set initial investment amount
+
+        for (let counter = 0; counter < this.OPTIM_CONSTANTS.maxIterations; counter++) {
+            // calc output, difference to expected value, slope
+            const calculatedSellAmount = await this.calcSellTokens(retAmt, outcomeIndex, balances);
+            const diff = calculatedSellAmount.sub(tokenAmountSell);
+            const slope = await this.calcForwardMethodSlope(
+                this.calcSellTokens,
+                balances,
+                retAmt,
+                this.OPTIM_CONSTANTS.slopeXOffset,
+                outcomeIndex
+            );
+            // Update the return amount
+            const offset = diff.div(slope).div(alphaInv);
+            retAmt = retAmt.sub(offset);
+
+            // Check for convergence
+            if (diff.abs().lte(this.OPTIM_CONSTANTS.tolerance)) {
+                break;
+            }
+        }
+
+        return retAmt;
+    };
+
+    private calcForwardMethodSlope = async (
+        method: MarketInterface["calcBuyTokens"] | MarketInterface["calcSellTokens"],
+        poolBalances: BigNumber[],
+        collateralAmount: BigNumber,
+        dx: number,
+        outcomeIndex: number
+    ): Promise<number> => {
+        const collateralAmount2 = collateralAmount.add(BigNumber.from(BN(`${dx}e18`).toString()));
+        const y1 = await method(collateralAmount, outcomeIndex, poolBalances);
+        const y2 = await method(collateralAmount2, outcomeIndex, poolBalances);
+        const num = BN(y2.sub(y1).toString());
+        const den = BN(collateralAmount2.sub(collateralAmount).toString());
+        let slope = Number(num.div(den).toFixed());
+        slope = slope > 1 ? Number(slope.toPrecision(1)) : 1;
+        return slope;
     };
 
     //[LEM] slippage not considered
     //[LEM] ensure approvals
     buy = async (
-        amountInvest: BigNumberish,
+        amountInvest: BigNumber,
         outcomeIndex: number,
         slippage: number
     ): Promise<ContractTransaction> => {
@@ -166,7 +332,7 @@ export class Market implements MarketInterface {
     };
 
     sell = async (
-        amountReturn: BigNumberish,
+        amountReturn: BigNumber,
         outcomeIndex: number,
         slippage: number
     ): Promise<ContractTransaction> => {
@@ -231,7 +397,7 @@ export class Market implements MarketInterface {
         conditionId: string,
         questionId: string,
         outcomes: [Outcome, Outcome, Outcome],
-        fee: BigNumberish
+        fee: BigNumber
     ): Promise<Market> {
         const fpmmRepo: MarketMakerRepo = await MarketMakerRepo.initialize(
             signer,
@@ -330,8 +496,8 @@ export class MarketAdmin {
         oracle: string,
         questionId: string,
         outcomes: [Outcome, Outcome, Outcome],
-        fee: BigNumberish,
-        funding: BigNumberish,
+        fee: BigNumber,
+        funding: BigNumber,
         initialOdds: [number, number, number]
     ): Promise<[string, string, string[]]> {
         try {

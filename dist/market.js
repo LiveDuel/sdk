@@ -10,11 +10,29 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MarketWatcher = exports.MarketAdmin = exports.Market = void 0;
+const bignumber_js_1 = require("bignumber.js");
 const ethers_1 = require("ethers");
 const conditionalTokens_1 = require("./conditionalTokens");
 const fpmm_1 = require("./fpmm");
+ethers_1.BigNumber.prototype.ceildiv = function (divisor) {
+    const quotient = this.div(divisor);
+    const remainder = this.mod(divisor);
+    if (remainder.isZero()) {
+        return quotient;
+    }
+    else {
+        return quotient.add(1);
+    }
+};
 class Market {
     constructor(signer, oracle, collateralAddress, conditionId, questionId, outcomes, fee, marketMaker) {
+        this.ONE = ethers_1.ethers.constants.WeiPerEther;
+        this.OPTIM_CONSTANTS = {
+            alpha: 0.1,
+            maxIterations: 1000,
+            slopeXOffset: 0.001,
+            tolerance: ethers_1.BigNumber.from((0, bignumber_js_1.BigNumber)(1e6).toString()),
+        };
         this.getUserTokenBalances = () => __awaiter(this, void 0, void 0, function* () {
             const account = yield this._signer.getAddress();
             const balances = [];
@@ -46,11 +64,97 @@ class Market {
             const odds = oddsWeight.map((item) => item / oddsWeightSum);
             return odds;
         });
-        this.calcBuyTokens = (amountInvest, outcomeIndex) => __awaiter(this, void 0, void 0, function* () {
+        this.calcBuyTokens_RPC = (amountInvest, outcomeIndex) => __awaiter(this, void 0, void 0, function* () {
             return this._marketMaker.calcBuyTokens(amountInvest, outcomeIndex);
         });
-        this.calcSellTokens = (amountReturn, outcomeIndex) => __awaiter(this, void 0, void 0, function* () {
+        this.calcSellTokens_RPC = (amountReturn, outcomeIndex) => __awaiter(this, void 0, void 0, function* () {
             return this._marketMaker.calcSellTokens(amountReturn, outcomeIndex);
+        });
+        this.calcBuyTokens = (amountInvest, outcomeIndex, poolBalances) => __awaiter(this, void 0, void 0, function* () {
+            const balances = poolBalances ? poolBalances : yield this.getPoolTokenBalances();
+            const buyTokenPoolBalance = balances[outcomeIndex];
+            const investmentAmountMinusFees = amountInvest.sub(amountInvest.mul(this.fee).div(this.ONE));
+            let endingOutcomeBalance = buyTokenPoolBalance.mul(this.ONE);
+            for (let i = 0; i < balances.length; i++) {
+                if (i != outcomeIndex) {
+                    const poolBalance = balances[i];
+                    endingOutcomeBalance = endingOutcomeBalance
+                        .mul(poolBalance)
+                        .ceildiv(poolBalance.add(investmentAmountMinusFees));
+                }
+            }
+            const tokenBuyAmount = buyTokenPoolBalance
+                .add(investmentAmountMinusFees)
+                .sub(endingOutcomeBalance.ceildiv(this.ONE));
+            return tokenBuyAmount;
+        });
+        this.calcSellTokens = (amountReturn, outcomeIndex, poolBalances) => __awaiter(this, void 0, void 0, function* () {
+            const balances = poolBalances ? poolBalances : yield this.getPoolTokenBalances();
+            const sellTokenPoolBalance = balances[outcomeIndex];
+            const returnAmountPlusFees = amountReturn.mul(this.ONE).div(this.ONE.sub(this.fee));
+            let endingOutcomeBalance = sellTokenPoolBalance.mul(this.ONE);
+            for (let i = 0; i < balances.length; i++) {
+                if (i != outcomeIndex) {
+                    const poolBalance = balances[i];
+                    endingOutcomeBalance = endingOutcomeBalance
+                        .mul(poolBalance)
+                        .ceildiv(poolBalance.sub(returnAmountPlusFees));
+                }
+            }
+            const tokenSellAmt = returnAmountPlusFees
+                .add(endingOutcomeBalance.ceildiv(this.ONE))
+                .sub(sellTokenPoolBalance);
+            return tokenSellAmt;
+        });
+        this.calcBuyAmount = (tokenAmountBuy, outcomeIndex) => __awaiter(this, void 0, void 0, function* () {
+            const balances = yield this.getPoolTokenBalances();
+            const alphaInv = ethers_1.BigNumber.from(1 / this.OPTIM_CONSTANTS.alpha);
+            // starting collateral amount
+            let invAmt = ethers_1.BigNumber.from((0, bignumber_js_1.BigNumber)(1e18).toString());
+            for (let counter = 0; counter < this.OPTIM_CONSTANTS.maxIterations; counter++) {
+                // calc output, difference to expected value, slope
+                const calculatedTokenBuyAmount = yield this.calcBuyTokens(invAmt, outcomeIndex, balances);
+                const diff = calculatedTokenBuyAmount.sub(tokenAmountBuy);
+                const slope = yield this.calcForwardMethodSlope(this.calcBuyTokens, balances, invAmt, this.OPTIM_CONSTANTS.slopeXOffset, outcomeIndex);
+                // Update the investment amount
+                const offset = diff.div(slope).div(alphaInv);
+                invAmt = invAmt.sub(offset);
+                // Check for convergence
+                if (diff.abs().lte(this.OPTIM_CONSTANTS.tolerance)) {
+                    break;
+                }
+            }
+            return invAmt;
+        });
+        this.calcSellAmount = (tokenAmountSell, outcomeIndex) => __awaiter(this, void 0, void 0, function* () {
+            const balances = yield this.getPoolTokenBalances();
+            const alphaInv = ethers_1.BigNumber.from(1 / this.OPTIM_CONSTANTS.alpha);
+            // starting collateral amount
+            let retAmt = ethers_1.BigNumber.from((0, bignumber_js_1.BigNumber)(1e18).toString()); // Set initial investment amount
+            for (let counter = 0; counter < this.OPTIM_CONSTANTS.maxIterations; counter++) {
+                // calc output, difference to expected value, slope
+                const calculatedSellAmount = yield this.calcSellTokens(retAmt, outcomeIndex, balances);
+                const diff = calculatedSellAmount.sub(tokenAmountSell);
+                const slope = yield this.calcForwardMethodSlope(this.calcSellTokens, balances, retAmt, this.OPTIM_CONSTANTS.slopeXOffset, outcomeIndex);
+                // Update the return amount
+                const offset = diff.div(slope).div(alphaInv);
+                retAmt = retAmt.sub(offset);
+                // Check for convergence
+                if (diff.abs().lte(this.OPTIM_CONSTANTS.tolerance)) {
+                    break;
+                }
+            }
+            return retAmt;
+        });
+        this.calcForwardMethodSlope = (method, poolBalances, collateralAmount, dx, outcomeIndex) => __awaiter(this, void 0, void 0, function* () {
+            const collateralAmount2 = collateralAmount.add(ethers_1.BigNumber.from((0, bignumber_js_1.BigNumber)(`${dx}e18`).toString()));
+            const y1 = yield method(collateralAmount, outcomeIndex, poolBalances);
+            const y2 = yield method(collateralAmount2, outcomeIndex, poolBalances);
+            const num = (0, bignumber_js_1.BigNumber)(y2.sub(y1).toString());
+            const den = (0, bignumber_js_1.BigNumber)(collateralAmount2.sub(collateralAmount).toString());
+            let slope = Number(num.div(den).toFixed());
+            slope = slope > 1 ? Number(slope.toPrecision(1)) : 1;
+            return slope;
         });
         //[LEM] slippage not considered
         //[LEM] ensure approvals
