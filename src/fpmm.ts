@@ -99,14 +99,9 @@ export interface MarketMakerRepoInterface {
 
     // removeLiquidity: (amountLP: BigNumberish) => Promise<ContractTransaction>;
 
-    //[LEM] convert to local calculation
     calcBuyTokens: (amountInvest: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
 
     calcSellTokens: (amountReturn: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
-
-    // calcBuyAmount: (tokenAmountBuy: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
-
-    // calcSellAmount: (tokenAmountSell: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
 
     buy: (
         amountInvest: BigNumberish,

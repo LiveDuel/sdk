@@ -29,6 +29,8 @@ export interface MarketInterface {
     readonly outcomes: [Outcome, Outcome, Outcome];
     readonly fee: BigNumber;
 
+    // getUserCollateralBalance: () => Promise<BigNumber>;
+
     getUserTokenBalances: () => Promise<BigNumber[]>;
 
     getPoolTokenBalances: () => Promise<BigNumber[]>;
