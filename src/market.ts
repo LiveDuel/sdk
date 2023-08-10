@@ -31,6 +31,8 @@ export interface MarketInterface {
 
     getUserCollateralBalance: () => Promise<BigNumber>;
 
+    getUserLPTokenBalance: () => Promise<BigNumber>;
+
     getUserTokenBalances: () => Promise<BigNumber[]>;
 
     getPoolTokenBalances: () => Promise<BigNumber[]>;
@@ -89,6 +91,8 @@ export interface MarketInterface {
 
     removeLiquidity: (amountLP: BigNumber) => Promise<ContractTransaction>;
 
+    getWithdrawableLiquidityFees: () => Promise<BigNumber>;
+
     withdrawLiquidityFees: () => Promise<ContractTransaction>;
 }
 
@@ -135,6 +139,11 @@ export class Market implements MarketInterface {
     getUserCollateralBalance = async (): Promise<BigNumber> => {
         const account = await this._signer.getAddress();
         return this._marketMaker.getCollateralBalance(account);
+    };
+
+    getUserLPTokenBalance = async (): Promise<BigNumber> => {
+        const account = await this._signer.getAddress();
+        return this._marketMaker.getLPTokenBalance(account);
     };
 
     getUserTokenBalances = async (): Promise<BigNumber[]> => {
@@ -398,6 +407,11 @@ export class Market implements MarketInterface {
         } catch (error) {
             throw error;
         }
+    };
+
+    getWithdrawableLiquidityFees = async (): Promise<BigNumber> => {
+        const account = await this._signer.getAddress();
+        return this._marketMaker.getWithdrawableFeeAmount(account);
     };
 
     withdrawLiquidityFees = async (): Promise<ContractTransaction> => {

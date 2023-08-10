@@ -37,6 +37,10 @@ class Market {
             const account = yield this._signer.getAddress();
             return this._marketMaker.getCollateralBalance(account);
         });
+        this.getUserLPTokenBalance = () => __awaiter(this, void 0, void 0, function* () {
+            const account = yield this._signer.getAddress();
+            return this._marketMaker.getLPTokenBalance(account);
+        });
         this.getUserTokenBalances = () => __awaiter(this, void 0, void 0, function* () {
             const account = yield this._signer.getAddress();
             const balances = [];
@@ -228,6 +232,10 @@ class Market {
             catch (error) {
                 throw error;
             }
+        });
+        this.getWithdrawableLiquidityFees = () => __awaiter(this, void 0, void 0, function* () {
+            const account = yield this._signer.getAddress();
+            return this._marketMaker.getWithdrawableFeeAmount(account);
         });
         this.withdrawLiquidityFees = () => __awaiter(this, void 0, void 0, function* () {
             try {
