@@ -29,6 +29,10 @@ export interface MarketInterface {
     readonly outcomes: [Outcome, Outcome, Outcome];
     readonly fee: BigNumber;
 
+    getUserCollateralBalance: () => Promise<BigNumber>;
+
+    getUserLPTokenBalance: () => Promise<BigNumber>;
+
     getUserTokenBalances: () => Promise<BigNumber[]>;
 
     getPoolTokenBalances: () => Promise<BigNumber[]>;
@@ -81,11 +85,15 @@ export interface MarketInterface {
         slippage: number
     ) => Promise<ContractTransaction>;
 
-    // addLiquidity: (amount: number) => Promise<>;
-
-    // removeLiquidity: (amount: number) => Promise<>;
-
     redeem: () => Promise<ContractTransaction>;
+
+    addLiquidity: (amount: BigNumber) => Promise<ContractTransaction>;
+
+    removeLiquidity: (amountLP: BigNumber) => Promise<ContractTransaction>;
+
+    getWithdrawableLiquidityFees: () => Promise<BigNumber>;
+
+    withdrawLiquidityFees: () => Promise<ContractTransaction>;
 }
 
 export class Market implements MarketInterface {
@@ -127,6 +135,16 @@ export class Market implements MarketInterface {
         this.outcomes = outcomes;
         this.fee = fee;
     }
+
+    getUserCollateralBalance = async (): Promise<BigNumber> => {
+        const account = await this._signer.getAddress();
+        return this._marketMaker.getCollateralBalance(account);
+    };
+
+    getUserLPTokenBalance = async (): Promise<BigNumber> => {
+        const account = await this._signer.getAddress();
+        return this._marketMaker.getLPTokenBalance(account);
+    };
 
     getUserTokenBalances = async (): Promise<BigNumber[]> => {
         const account = await this._signer.getAddress();
@@ -315,10 +333,8 @@ export class Market implements MarketInterface {
             //[LEM] Temp
             const MINTOKENS = "1";
 
-            const account = await this._signer.getAddress();
-            const collateralBalance = await this._marketMaker.getCollateralBalance(account);
-
-            if (BigNumber.from(amountInvest).gt(collateralBalance)) {
+            const collateralBalance = await this.getUserCollateralBalance();
+            if (amountInvest.gt(collateralBalance)) {
                 throw new Error("Insufficient collateral balance in account");
             } else {
                 let trx1 = await this._marketMaker.setCollateralApproval(amountInvest);
@@ -340,12 +356,7 @@ export class Market implements MarketInterface {
             //[LEM] Temp
             const MAXTOKENS = "1" + "0".repeat(22);
 
-            const account = await this._signer.getAddress();
-
-            const outcomeTokenBalance = await this._marketMaker.getConditionalTokenBalance(
-                account,
-                this.outcomes[outcomeIndex].position_id
-            );
+            const outcomeTokenBalance = (await this.getUserTokenBalances())[outcomeIndex];
             const outcomeTokensToSell = await this._marketMaker.calcSellTokens(
                 amountReturn,
                 outcomeIndex
@@ -354,6 +365,7 @@ export class Market implements MarketInterface {
             if (outcomeTokensToSell.gt(outcomeTokenBalance)) {
                 throw new Error("Insufficient position token balance in account");
             }
+            const account = await this._signer.getAddress();
             const isApproved = await this._marketMaker.getConditionalTokenApproval(account);
             if (!isApproved) {
                 let trx1 = await this._marketMaker.setConditionalTokenApproval(true);
@@ -370,6 +382,53 @@ export class Market implements MarketInterface {
     redeem = async (): Promise<ContractTransaction> => {
         try {
             return await this._marketMaker.redeem(this.conditionId);
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    addLiquidity = async (amount: BigNumber): Promise<ContractTransaction> => {
+        try {
+            const collateralBalance = await this.getUserCollateralBalance();
+
+            if (amount.gt(collateralBalance)) {
+                throw new Error("Insufficient collateral balance in account");
+            } else {
+                let trx1 = await this._marketMaker.setCollateralApproval(amount);
+                await trx1.wait();
+                let trx2 = await this._marketMaker.addLiquidity(amount);
+                return trx2;
+            }
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    removeLiquidity = async (amountLP: BigNumber): Promise<ContractTransaction> => {
+        try {
+            const LPBalance = await this.getUserLPTokenBalance();
+
+            if (amountLP.gt(LPBalance)) {
+                throw new Error("Insufficient LP Token balance in account");
+            } else {
+                let trx1 = await this._marketMaker.setLPTokenApproval(amountLP);
+                await trx1.wait();
+                let trx2 = await this._marketMaker.removeLiquidity(amountLP);
+                return trx2;
+            }
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    getWithdrawableLiquidityFees = async (): Promise<BigNumber> => {
+        const account = await this._signer.getAddress();
+        return this._marketMaker.getWithdrawableFeeAmount(account);
+    };
+
+    withdrawLiquidityFees = async (): Promise<ContractTransaction> => {
+        try {
+            return this._marketMaker.withdrawFeeAmount();
         } catch (error) {
             throw error;
         }

@@ -33,6 +33,14 @@ class Market {
             slopeXOffset: 0.001,
             tolerance: ethers_1.BigNumber.from((0, bignumber_js_1.BigNumber)(1e6).toString()),
         };
+        this.getUserCollateralBalance = () => __awaiter(this, void 0, void 0, function* () {
+            const account = yield this._signer.getAddress();
+            return this._marketMaker.getCollateralBalance(account);
+        });
+        this.getUserLPTokenBalance = () => __awaiter(this, void 0, void 0, function* () {
+            const account = yield this._signer.getAddress();
+            return this._marketMaker.getLPTokenBalance(account);
+        });
         this.getUserTokenBalances = () => __awaiter(this, void 0, void 0, function* () {
             const account = yield this._signer.getAddress();
             const balances = [];
@@ -162,9 +170,8 @@ class Market {
             try {
                 //[LEM] Temp
                 const MINTOKENS = "1";
-                const account = yield this._signer.getAddress();
-                const collateralBalance = yield this._marketMaker.getCollateralBalance(account);
-                if (ethers_1.BigNumber.from(amountInvest).gt(collateralBalance)) {
+                const collateralBalance = yield this.getUserCollateralBalance();
+                if (amountInvest.gt(collateralBalance)) {
                     throw new Error("Insufficient collateral balance in account");
                 }
                 else {
@@ -182,13 +189,13 @@ class Market {
             try {
                 //[LEM] Temp
                 const MAXTOKENS = "1" + "0".repeat(22);
-                const account = yield this._signer.getAddress();
-                const outcomeTokenBalance = yield this._marketMaker.getConditionalTokenBalance(account, this.outcomes[outcomeIndex].position_id);
+                const outcomeTokenBalance = (yield this.getUserTokenBalances())[outcomeIndex];
                 const outcomeTokensToSell = yield this._marketMaker.calcSellTokens(amountReturn, outcomeIndex);
                 //[LEM] slippage not considered (outcomeTokensToSell + slippage%OfTokens)
                 if (outcomeTokensToSell.gt(outcomeTokenBalance)) {
                     throw new Error("Insufficient position token balance in account");
                 }
+                const account = yield this._signer.getAddress();
                 const isApproved = yield this._marketMaker.getConditionalTokenApproval(account);
                 if (!isApproved) {
                     let trx1 = yield this._marketMaker.setConditionalTokenApproval(true);
@@ -204,6 +211,52 @@ class Market {
         this.redeem = () => __awaiter(this, void 0, void 0, function* () {
             try {
                 return yield this._marketMaker.redeem(this.conditionId);
+            }
+            catch (error) {
+                throw error;
+            }
+        });
+        this.addLiquidity = (amount) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const collateralBalance = yield this.getUserCollateralBalance();
+                if (amount.gt(collateralBalance)) {
+                    throw new Error("Insufficient collateral balance in account");
+                }
+                else {
+                    let trx1 = yield this._marketMaker.setCollateralApproval(amount);
+                    yield trx1.wait();
+                    let trx2 = yield this._marketMaker.addLiquidity(amount);
+                    return trx2;
+                }
+            }
+            catch (error) {
+                throw error;
+            }
+        });
+        this.removeLiquidity = (amountLP) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const LPBalance = yield this.getUserLPTokenBalance();
+                if (amountLP.gt(LPBalance)) {
+                    throw new Error("Insufficient LP Token balance in account");
+                }
+                else {
+                    let trx1 = yield this._marketMaker.setLPTokenApproval(amountLP);
+                    yield trx1.wait();
+                    let trx2 = yield this._marketMaker.removeLiquidity(amountLP);
+                    return trx2;
+                }
+            }
+            catch (error) {
+                throw error;
+            }
+        });
+        this.getWithdrawableLiquidityFees = () => __awaiter(this, void 0, void 0, function* () {
+            const account = yield this._signer.getAddress();
+            return this._marketMaker.getWithdrawableFeeAmount(account);
+        });
+        this.withdrawLiquidityFees = () => __awaiter(this, void 0, void 0, function* () {
+            try {
+                return this._marketMaker.withdrawFeeAmount();
             }
             catch (error) {
                 throw error;

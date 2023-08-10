@@ -90,23 +90,9 @@ export interface MarketMakerRepoInterface {
     setConditionalTokenApproval: (approved: boolean) => Promise<ContractTransaction>;
 
     /* MARKET METHODS */
-    addLiquidityInitial: (
-        amount: BigNumberish,
-        initialOdds: [number, number, number]
-    ) => Promise<ContractTransaction>;
-
-    // addLiquidity: (amount: BigNumberish) => Promise<ContractTransaction>;
-
-    // removeLiquidity: (amountLP: BigNumberish) => Promise<ContractTransaction>;
-
-    //[LEM] convert to local calculation
     calcBuyTokens: (amountInvest: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
 
     calcSellTokens: (amountReturn: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
-
-    // calcBuyAmount: (tokenAmountBuy: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
-
-    // calcSellAmount: (tokenAmountSell: BigNumberish, outcomeIndex: number) => Promise<BigNumber>;
 
     buy: (
         amountInvest: BigNumberish,
@@ -121,6 +107,16 @@ export interface MarketMakerRepoInterface {
     ) => Promise<ContractTransaction>;
 
     redeem: (conditionId: string) => Promise<ContractTransaction>;
+
+    /* LIQUIDITY METHODS */
+    addLiquidityInitial: (
+        amount: BigNumberish,
+        initialOdds: [number, number, number]
+    ) => Promise<ContractTransaction>;
+
+    addLiquidity: (amount: BigNumberish) => Promise<ContractTransaction>;
+
+    removeLiquidity: (amountLP: BigNumberish) => Promise<ContractTransaction>;
 
     /* FEE METHODS */
     getWithdrawableFeeAmount: (account: string) => Promise<BigNumber>;
@@ -207,25 +203,6 @@ export class MarketMakerRepo implements MarketMakerRepoInterface {
     };
 
     /* MARKET METHODS */
-    addLiquidityInitial = async (
-        amount: BigNumberish,
-        initialOdds: [number, number, number]
-    ): Promise<ContractTransaction> => {
-        if (initialOdds.length > 3 || initialOdds.length < 3)
-            throw new Error("Only 3 outcomes supported right now");
-
-        const calcDistHint = (odds: [number, number, number]) => {
-            const [O1, O2, O3] = odds;
-            let D1 = 1;
-            let D2 = (O1 * D1) / O2;
-            let D3 = (O1 * D1) / O3;
-            return [D1, D2, D3].map((v) => ethers.utils.parseEther(v.toString()));
-        };
-
-        const distHint = calcDistHint(initialOdds);
-        return this._contract.addFunding(amount, distHint);
-    };
-
     calcBuyTokens = async (amountInvest: BigNumberish, outcomeIndex: number): Promise<BigNumber> => {
         return this._contract.calcBuyAmount(amountInvest, outcomeIndex);
     };
@@ -252,6 +229,34 @@ export class MarketMakerRepo implements MarketMakerRepoInterface {
 
     redeem = async (conditionId: string): Promise<ContractTransaction> => {
         return this._conditionalTokens.redeemPositions(this.collateralAddress, conditionId);
+    };
+
+    /* LIQUIDITY METHODS */
+    addLiquidityInitial = async (
+        amount: BigNumberish,
+        initialOdds: [number, number, number]
+    ): Promise<ContractTransaction> => {
+        if (initialOdds.length > 3 || initialOdds.length < 3)
+            throw new Error("Only 3 outcomes supported right now");
+
+        const calcDistHint = (odds: [number, number, number]) => {
+            const [O1, O2, O3] = odds;
+            let D1 = 1;
+            let D2 = (O1 * D1) / O2;
+            let D3 = (O1 * D1) / O3;
+            return [D1, D2, D3].map((v) => ethers.utils.parseEther(v.toString()));
+        };
+
+        const distHint = calcDistHint(initialOdds);
+        return this._contract.addFunding(amount, distHint);
+    };
+
+    addLiquidity = async (amount: BigNumberish): Promise<ContractTransaction> => {
+        return this._contract.addFunding(amount, []);
+    };
+
+    removeLiquidity = async (amountLP: BigNumberish): Promise<ContractTransaction> => {
+        return this._contract.removeFunding(amountLP);
     };
 
     /* FEE METHODS */

@@ -84,19 +84,6 @@ class MarketMakerRepo {
             return this._conditionalTokens.setApprovalForAll(this.contractAddress, approved);
         });
         /* MARKET METHODS */
-        this.addLiquidityInitial = (amount, initialOdds) => __awaiter(this, void 0, void 0, function* () {
-            if (initialOdds.length > 3 || initialOdds.length < 3)
-                throw new Error("Only 3 outcomes supported right now");
-            const calcDistHint = (odds) => {
-                const [O1, O2, O3] = odds;
-                let D1 = 1;
-                let D2 = (O1 * D1) / O2;
-                let D3 = (O1 * D1) / O3;
-                return [D1, D2, D3].map((v) => ethers_1.ethers.utils.parseEther(v.toString()));
-            };
-            const distHint = calcDistHint(initialOdds);
-            return this._contract.addFunding(amount, distHint);
-        });
         this.calcBuyTokens = (amountInvest, outcomeIndex) => __awaiter(this, void 0, void 0, function* () {
             return this._contract.calcBuyAmount(amountInvest, outcomeIndex);
         });
@@ -111,6 +98,26 @@ class MarketMakerRepo {
         });
         this.redeem = (conditionId) => __awaiter(this, void 0, void 0, function* () {
             return this._conditionalTokens.redeemPositions(this.collateralAddress, conditionId);
+        });
+        /* LIQUIDITY METHODS */
+        this.addLiquidityInitial = (amount, initialOdds) => __awaiter(this, void 0, void 0, function* () {
+            if (initialOdds.length > 3 || initialOdds.length < 3)
+                throw new Error("Only 3 outcomes supported right now");
+            const calcDistHint = (odds) => {
+                const [O1, O2, O3] = odds;
+                let D1 = 1;
+                let D2 = (O1 * D1) / O2;
+                let D3 = (O1 * D1) / O3;
+                return [D1, D2, D3].map((v) => ethers_1.ethers.utils.parseEther(v.toString()));
+            };
+            const distHint = calcDistHint(initialOdds);
+            return this._contract.addFunding(amount, distHint);
+        });
+        this.addLiquidity = (amount) => __awaiter(this, void 0, void 0, function* () {
+            return this._contract.addFunding(amount, []);
+        });
+        this.removeLiquidity = (amountLP) => __awaiter(this, void 0, void 0, function* () {
+            return this._contract.removeFunding(amountLP);
         });
         /* FEE METHODS */
         this.getWithdrawableFeeAmount = (account) => __awaiter(this, void 0, void 0, function* () {
