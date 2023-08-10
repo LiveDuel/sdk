@@ -33,6 +33,10 @@ class Market {
             slopeXOffset: 0.001,
             tolerance: ethers_1.BigNumber.from((0, bignumber_js_1.BigNumber)(1e6).toString()),
         };
+        this.getUserCollateralBalance = () => __awaiter(this, void 0, void 0, function* () {
+            const account = yield this._signer.getAddress();
+            return this._marketMaker.getCollateralBalance(account);
+        });
         this.getUserTokenBalances = () => __awaiter(this, void 0, void 0, function* () {
             const account = yield this._signer.getAddress();
             const balances = [];
@@ -204,6 +208,30 @@ class Market {
         this.redeem = () => __awaiter(this, void 0, void 0, function* () {
             try {
                 return yield this._marketMaker.redeem(this.conditionId);
+            }
+            catch (error) {
+                throw error;
+            }
+        });
+        this.addLiquidity = (amount) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                return this._marketMaker.addLiquidity(amount);
+            }
+            catch (error) {
+                throw error;
+            }
+        });
+        this.removeLiquidity = (amountLP) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                return this._marketMaker.removeLiquidity(amountLP);
+            }
+            catch (error) {
+                throw error;
+            }
+        });
+        this.withdrawLiquidityFees = () => __awaiter(this, void 0, void 0, function* () {
+            try {
+                return this._marketMaker.withdrawFeeAmount();
             }
             catch (error) {
                 throw error;

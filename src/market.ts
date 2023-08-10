@@ -29,7 +29,7 @@ export interface MarketInterface {
     readonly outcomes: [Outcome, Outcome, Outcome];
     readonly fee: BigNumber;
 
-    // getUserCollateralBalance: () => Promise<BigNumber>;
+    getUserCollateralBalance: () => Promise<BigNumber>;
 
     getUserTokenBalances: () => Promise<BigNumber[]>;
 
@@ -83,11 +83,13 @@ export interface MarketInterface {
         slippage: number
     ) => Promise<ContractTransaction>;
 
-    // addLiquidity: (amount: number) => Promise<>;
-
-    // removeLiquidity: (amount: number) => Promise<>;
-
     redeem: () => Promise<ContractTransaction>;
+
+    addLiquidity: (amount: BigNumber) => Promise<ContractTransaction>;
+
+    removeLiquidity: (amountLP: BigNumber) => Promise<ContractTransaction>;
+
+    withdrawLiquidityFees: () => Promise<ContractTransaction>;
 }
 
 export class Market implements MarketInterface {
@@ -129,6 +131,11 @@ export class Market implements MarketInterface {
         this.outcomes = outcomes;
         this.fee = fee;
     }
+
+    getUserCollateralBalance = async (): Promise<BigNumber> => {
+        const account = await this._signer.getAddress();
+        return this._marketMaker.getCollateralBalance(account);
+    };
 
     getUserTokenBalances = async (): Promise<BigNumber[]> => {
         const account = await this._signer.getAddress();
@@ -372,6 +379,30 @@ export class Market implements MarketInterface {
     redeem = async (): Promise<ContractTransaction> => {
         try {
             return await this._marketMaker.redeem(this.conditionId);
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    addLiquidity = async (amount: BigNumber): Promise<ContractTransaction> => {
+        try {
+            return this._marketMaker.addLiquidity(amount);
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    removeLiquidity = async (amountLP: BigNumber): Promise<ContractTransaction> => {
+        try {
+            return this._marketMaker.removeLiquidity(amountLP);
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    withdrawLiquidityFees = async (): Promise<ContractTransaction> => {
+        try {
+            return this._marketMaker.withdrawFeeAmount();
         } catch (error) {
             throw error;
         }
