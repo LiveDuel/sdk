@@ -15,6 +15,23 @@ const _abi = [
     inputs: [
       {
         indexed: true,
+        name: "previousOwner",
+        type: "address",
+      },
+      {
+        indexed: true,
+        name: "newOwner",
+        type: "address",
+      },
+    ],
+    name: "OwnershipTransferred",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
         name: "funder",
         type: "address",
       },
@@ -126,7 +143,7 @@ const _abi = [
 ];
 
 const _bytecode =
-  "0x6080604052348015600f57600080fd5b50603e80601d6000396000f3fe6080604052600080fdfea265627a7a723058206910496edc33f46cbe11bbfc01f9a3371ab5640b521b27bf8d2b3f2ec2b7dee564736f6c634300050a0032";
+  "0x6080604052348015600f57600080fd5b50603e80601d6000396000f3fe6080604052600080fdfea265627a7a72305820476163f9141c9bc2d09f27b30c0f4be7a67070a30e7d5caab2113e572277965a64736f6c634300050a0032";
 
 type FixedProductMarketMakerDataConstructorParams =
   | [signer?: Signer]

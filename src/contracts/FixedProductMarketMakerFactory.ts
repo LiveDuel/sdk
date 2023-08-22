@@ -75,6 +75,7 @@ export interface FixedProductMarketMakerFactoryInterface
 
   events: {
     "FixedProductMarketMakerCreation(address,address,address,address,bytes32[],uint256)": EventFragment;
+    "OwnershipTransferred(address,address)": EventFragment;
     "FPMMFundingAdded(address,uint256[],uint256)": EventFragment;
     "FPMMFundingRemoved(address,uint256[],uint256,uint256)": EventFragment;
     "FPMMBuy(address,uint256,uint256,uint256,uint256)": EventFragment;
@@ -85,6 +86,7 @@ export interface FixedProductMarketMakerFactoryInterface
   getEvent(
     nameOrSignatureOrTopic: "FixedProductMarketMakerCreation"
   ): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "FPMMFundingAdded"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "FPMMFundingRemoved"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "FPMMBuy"): EventFragment;
@@ -107,6 +109,18 @@ export type FixedProductMarketMakerCreationEvent = TypedEvent<
 
 export type FixedProductMarketMakerCreationEventFilter =
   TypedEventFilter<FixedProductMarketMakerCreationEvent>;
+
+export interface OwnershipTransferredEventObject {
+  previousOwner: string;
+  newOwner: string;
+}
+export type OwnershipTransferredEvent = TypedEvent<
+  [string, string],
+  OwnershipTransferredEventObject
+>;
+
+export type OwnershipTransferredEventFilter =
+  TypedEventFilter<OwnershipTransferredEvent>;
 
 export interface FPMMFundingAddedEventObject {
   funder: string;
@@ -266,6 +280,15 @@ export interface FixedProductMarketMakerFactory extends BaseContract {
       conditionIds?: null,
       fee?: null
     ): FixedProductMarketMakerCreationEventFilter;
+
+    "OwnershipTransferred(address,address)"(
+      previousOwner?: PromiseOrValue<string> | null,
+      newOwner?: PromiseOrValue<string> | null
+    ): OwnershipTransferredEventFilter;
+    OwnershipTransferred(
+      previousOwner?: PromiseOrValue<string> | null,
+      newOwner?: PromiseOrValue<string> | null
+    ): OwnershipTransferredEventFilter;
 
     "FPMMFundingAdded(address,uint256[],uint256)"(
       funder?: PromiseOrValue<string> | null,

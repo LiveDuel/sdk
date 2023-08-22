@@ -16,3 +16,4 @@ export { IERC1155__factory } from "./IERC1155__factory";
 export { IERC1155TokenReceiver__factory } from "./IERC1155TokenReceiver__factory";
 export { IERC165__factory } from "./IERC165__factory";
 export { IERC20__factory } from "./IERC20__factory";
+export { Ownable__factory } from "./Ownable__factory";

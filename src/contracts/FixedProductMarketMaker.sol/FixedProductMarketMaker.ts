@@ -30,6 +30,7 @@ import type {
 export interface FixedProductMarketMakerInterface extends utils.Interface {
   functions: {
     "supportsInterface(bytes4)": FunctionFragment;
+    "resume()": FunctionFragment;
     "approve(address,uint256)": FunctionFragment;
     "withdrawFees(address)": FunctionFragment;
     "feesWithdrawableBy(address)": FunctionFragment;
@@ -38,13 +39,19 @@ export interface FixedProductMarketMakerInterface extends utils.Interface {
     "increaseAllowance(address,uint256)": FunctionFragment;
     "buy(uint256,uint256,uint256)": FunctionFragment;
     "calcSellAmount(uint256,uint256)": FunctionFragment;
+    "close()": FunctionFragment;
     "conditionalTokens()": FunctionFragment;
     "balanceOf(address)": FunctionFragment;
+    "renounceOwnership()": FunctionFragment;
+    "pause()": FunctionFragment;
+    "owner()": FunctionFragment;
+    "isOwner()": FunctionFragment;
     "collectedFees()": FunctionFragment;
     "decreaseAllowance(address,uint256)": FunctionFragment;
     "transfer(address,uint256)": FunctionFragment;
     "collateralToken()": FunctionFragment;
     "onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)": FunctionFragment;
+    "stage()": FunctionFragment;
     "sell(uint256,uint256,uint256)": FunctionFragment;
     "addFunding(uint256,uint256[])": FunctionFragment;
     "conditionIds(uint256)": FunctionFragment;
@@ -52,12 +59,14 @@ export interface FixedProductMarketMakerInterface extends utils.Interface {
     "fee()": FunctionFragment;
     "removeFunding(uint256)": FunctionFragment;
     "onERC1155Received(address,address,uint256,uint256,bytes)": FunctionFragment;
+    "transferOwnership(address)": FunctionFragment;
     "calcBuyAmount(uint256,uint256)": FunctionFragment;
   };
 
   getFunction(
     nameOrSignatureOrTopic:
       | "supportsInterface"
+      | "resume"
       | "approve"
       | "withdrawFees"
       | "feesWithdrawableBy"
@@ -66,13 +75,19 @@ export interface FixedProductMarketMakerInterface extends utils.Interface {
       | "increaseAllowance"
       | "buy"
       | "calcSellAmount"
+      | "close"
       | "conditionalTokens"
       | "balanceOf"
+      | "renounceOwnership"
+      | "pause"
+      | "owner"
+      | "isOwner"
       | "collectedFees"
       | "decreaseAllowance"
       | "transfer"
       | "collateralToken"
       | "onERC1155BatchReceived"
+      | "stage"
       | "sell"
       | "addFunding"
       | "conditionIds"
@@ -80,6 +95,7 @@ export interface FixedProductMarketMakerInterface extends utils.Interface {
       | "fee"
       | "removeFunding"
       | "onERC1155Received"
+      | "transferOwnership"
       | "calcBuyAmount"
   ): FunctionFragment;
 
@@ -87,6 +103,7 @@ export interface FixedProductMarketMakerInterface extends utils.Interface {
     functionFragment: "supportsInterface",
     values: [PromiseOrValue<BytesLike>]
   ): string;
+  encodeFunctionData(functionFragment: "resume", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "approve",
     values: [PromiseOrValue<string>, PromiseOrValue<BigNumberish>]
@@ -127,6 +144,7 @@ export interface FixedProductMarketMakerInterface extends utils.Interface {
     functionFragment: "calcSellAmount",
     values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>]
   ): string;
+  encodeFunctionData(functionFragment: "close", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "conditionalTokens",
     values?: undefined
@@ -135,6 +153,13 @@ export interface FixedProductMarketMakerInterface extends utils.Interface {
     functionFragment: "balanceOf",
     values: [PromiseOrValue<string>]
   ): string;
+  encodeFunctionData(
+    functionFragment: "renounceOwnership",
+    values?: undefined
+  ): string;
+  encodeFunctionData(functionFragment: "pause", values?: undefined): string;
+  encodeFunctionData(functionFragment: "owner", values?: undefined): string;
+  encodeFunctionData(functionFragment: "isOwner", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "collectedFees",
     values?: undefined
@@ -161,6 +186,7 @@ export interface FixedProductMarketMakerInterface extends utils.Interface {
       PromiseOrValue<BytesLike>
     ]
   ): string;
+  encodeFunctionData(functionFragment: "stage", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "sell",
     values: [
@@ -197,6 +223,10 @@ export interface FixedProductMarketMakerInterface extends utils.Interface {
     ]
   ): string;
   encodeFunctionData(
+    functionFragment: "transferOwnership",
+    values: [PromiseOrValue<string>]
+  ): string;
+  encodeFunctionData(
     functionFragment: "calcBuyAmount",
     values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>]
   ): string;
@@ -205,6 +235,7 @@ export interface FixedProductMarketMakerInterface extends utils.Interface {
     functionFragment: "supportsInterface",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "resume", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "approve", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "withdrawFees",
@@ -231,11 +262,19 @@ export interface FixedProductMarketMakerInterface extends utils.Interface {
     functionFragment: "calcSellAmount",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "close", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "conditionalTokens",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "balanceOf", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "renounceOwnership",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "pause", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "isOwner", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "collectedFees",
     data: BytesLike
@@ -253,6 +292,7 @@ export interface FixedProductMarketMakerInterface extends utils.Interface {
     functionFragment: "onERC1155BatchReceived",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "stage", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "sell", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "addFunding", data: BytesLike): Result;
   decodeFunctionResult(
@@ -270,26 +310,53 @@ export interface FixedProductMarketMakerInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "transferOwnership",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "calcBuyAmount",
     data: BytesLike
   ): Result;
 
   events: {
+    "FPMMPaused()": EventFragment;
+    "FPMMResumed()": EventFragment;
+    "FPMMClosed()": EventFragment;
     "FPMMFundingAdded(address,uint256[],uint256)": EventFragment;
     "FPMMFundingRemoved(address,uint256[],uint256,uint256)": EventFragment;
     "FPMMBuy(address,uint256,uint256,uint256,uint256)": EventFragment;
     "FPMMSell(address,uint256,uint256,uint256,uint256)": EventFragment;
     "Transfer(address,address,uint256)": EventFragment;
     "Approval(address,address,uint256)": EventFragment;
+    "OwnershipTransferred(address,address)": EventFragment;
   };
 
+  getEvent(nameOrSignatureOrTopic: "FPMMPaused"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "FPMMResumed"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "FPMMClosed"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "FPMMFundingAdded"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "FPMMFundingRemoved"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "FPMMBuy"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "FPMMSell"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "Transfer"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "Approval"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
 }
+
+export interface FPMMPausedEventObject {}
+export type FPMMPausedEvent = TypedEvent<[], FPMMPausedEventObject>;
+
+export type FPMMPausedEventFilter = TypedEventFilter<FPMMPausedEvent>;
+
+export interface FPMMResumedEventObject {}
+export type FPMMResumedEvent = TypedEvent<[], FPMMResumedEventObject>;
+
+export type FPMMResumedEventFilter = TypedEventFilter<FPMMResumedEvent>;
+
+export interface FPMMClosedEventObject {}
+export type FPMMClosedEvent = TypedEvent<[], FPMMClosedEventObject>;
+
+export type FPMMClosedEventFilter = TypedEventFilter<FPMMClosedEvent>;
 
 export interface FPMMFundingAddedEventObject {
   funder: string;
@@ -370,6 +437,18 @@ export type ApprovalEvent = TypedEvent<
 
 export type ApprovalEventFilter = TypedEventFilter<ApprovalEvent>;
 
+export interface OwnershipTransferredEventObject {
+  previousOwner: string;
+  newOwner: string;
+}
+export type OwnershipTransferredEvent = TypedEvent<
+  [string, string],
+  OwnershipTransferredEventObject
+>;
+
+export type OwnershipTransferredEventFilter =
+  TypedEventFilter<OwnershipTransferredEvent>;
+
 export interface FixedProductMarketMaker extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
   attach(addressOrName: string): this;
@@ -401,6 +480,10 @@ export interface FixedProductMarketMaker extends BaseContract {
       interfaceId: PromiseOrValue<BytesLike>,
       overrides?: CallOverrides
     ): Promise<[boolean]>;
+
+    resume(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
 
     approve(
       spender: PromiseOrValue<string>,
@@ -446,12 +529,28 @@ export interface FixedProductMarketMaker extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[BigNumber] & { outcomeTokenSellAmount: BigNumber }>;
 
+    close(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
     conditionalTokens(overrides?: CallOverrides): Promise<[string]>;
 
     balanceOf(
       account: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<[BigNumber]>;
+
+    renounceOwnership(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
+    pause(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
+    owner(overrides?: CallOverrides): Promise<[string]>;
+
+    isOwner(overrides?: CallOverrides): Promise<[boolean]>;
 
     collectedFees(overrides?: CallOverrides): Promise<[BigNumber]>;
 
@@ -477,6 +576,8 @@ export interface FixedProductMarketMaker extends BaseContract {
       data: PromiseOrValue<BytesLike>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
+
+    stage(overrides?: CallOverrides): Promise<[number]>;
 
     sell(
       returnAmount: PromiseOrValue<BigNumberish>,
@@ -518,6 +619,11 @@ export interface FixedProductMarketMaker extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
+    transferOwnership(
+      newOwner: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
     calcBuyAmount(
       investmentAmount: PromiseOrValue<BigNumberish>,
       outcomeIndex: PromiseOrValue<BigNumberish>,
@@ -529,6 +635,10 @@ export interface FixedProductMarketMaker extends BaseContract {
     interfaceId: PromiseOrValue<BytesLike>,
     overrides?: CallOverrides
   ): Promise<boolean>;
+
+  resume(
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
 
   approve(
     spender: PromiseOrValue<string>,
@@ -574,12 +684,28 @@ export interface FixedProductMarketMaker extends BaseContract {
     overrides?: CallOverrides
   ): Promise<BigNumber>;
 
+  close(
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
   conditionalTokens(overrides?: CallOverrides): Promise<string>;
 
   balanceOf(
     account: PromiseOrValue<string>,
     overrides?: CallOverrides
   ): Promise<BigNumber>;
+
+  renounceOwnership(
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  pause(
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  owner(overrides?: CallOverrides): Promise<string>;
+
+  isOwner(overrides?: CallOverrides): Promise<boolean>;
 
   collectedFees(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -605,6 +731,8 @@ export interface FixedProductMarketMaker extends BaseContract {
     data: PromiseOrValue<BytesLike>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
+
+  stage(overrides?: CallOverrides): Promise<number>;
 
   sell(
     returnAmount: PromiseOrValue<BigNumberish>,
@@ -646,6 +774,11 @@ export interface FixedProductMarketMaker extends BaseContract {
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
+  transferOwnership(
+    newOwner: PromiseOrValue<string>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
   calcBuyAmount(
     investmentAmount: PromiseOrValue<BigNumberish>,
     outcomeIndex: PromiseOrValue<BigNumberish>,
@@ -657,6 +790,8 @@ export interface FixedProductMarketMaker extends BaseContract {
       interfaceId: PromiseOrValue<BytesLike>,
       overrides?: CallOverrides
     ): Promise<boolean>;
+
+    resume(overrides?: CallOverrides): Promise<void>;
 
     approve(
       spender: PromiseOrValue<string>,
@@ -702,12 +837,22 @@ export interface FixedProductMarketMaker extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
+    close(overrides?: CallOverrides): Promise<void>;
+
     conditionalTokens(overrides?: CallOverrides): Promise<string>;
 
     balanceOf(
       account: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
+
+    renounceOwnership(overrides?: CallOverrides): Promise<void>;
+
+    pause(overrides?: CallOverrides): Promise<void>;
+
+    owner(overrides?: CallOverrides): Promise<string>;
+
+    isOwner(overrides?: CallOverrides): Promise<boolean>;
 
     collectedFees(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -733,6 +878,8 @@ export interface FixedProductMarketMaker extends BaseContract {
       data: PromiseOrValue<BytesLike>,
       overrides?: CallOverrides
     ): Promise<string>;
+
+    stage(overrides?: CallOverrides): Promise<number>;
 
     sell(
       returnAmount: PromiseOrValue<BigNumberish>,
@@ -774,6 +921,11 @@ export interface FixedProductMarketMaker extends BaseContract {
       overrides?: CallOverrides
     ): Promise<string>;
 
+    transferOwnership(
+      newOwner: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
     calcBuyAmount(
       investmentAmount: PromiseOrValue<BigNumberish>,
       outcomeIndex: PromiseOrValue<BigNumberish>,
@@ -782,6 +934,15 @@ export interface FixedProductMarketMaker extends BaseContract {
   };
 
   filters: {
+    "FPMMPaused()"(): FPMMPausedEventFilter;
+    FPMMPaused(): FPMMPausedEventFilter;
+
+    "FPMMResumed()"(): FPMMResumedEventFilter;
+    FPMMResumed(): FPMMResumedEventFilter;
+
+    "FPMMClosed()"(): FPMMClosedEventFilter;
+    FPMMClosed(): FPMMClosedEventFilter;
+
     "FPMMFundingAdded(address,uint256[],uint256)"(
       funder?: PromiseOrValue<string> | null,
       amountsAdded?: null,
@@ -857,12 +1018,25 @@ export interface FixedProductMarketMaker extends BaseContract {
       spender?: PromiseOrValue<string> | null,
       value?: null
     ): ApprovalEventFilter;
+
+    "OwnershipTransferred(address,address)"(
+      previousOwner?: PromiseOrValue<string> | null,
+      newOwner?: PromiseOrValue<string> | null
+    ): OwnershipTransferredEventFilter;
+    OwnershipTransferred(
+      previousOwner?: PromiseOrValue<string> | null,
+      newOwner?: PromiseOrValue<string> | null
+    ): OwnershipTransferredEventFilter;
   };
 
   estimateGas: {
     supportsInterface(
       interfaceId: PromiseOrValue<BytesLike>,
       overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    resume(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
     approve(
@@ -909,12 +1083,28 @@ export interface FixedProductMarketMaker extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
+    close(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
     conditionalTokens(overrides?: CallOverrides): Promise<BigNumber>;
 
     balanceOf(
       account: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
+
+    renounceOwnership(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    pause(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    owner(overrides?: CallOverrides): Promise<BigNumber>;
+
+    isOwner(overrides?: CallOverrides): Promise<BigNumber>;
 
     collectedFees(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -940,6 +1130,8 @@ export interface FixedProductMarketMaker extends BaseContract {
       data: PromiseOrValue<BytesLike>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
+
+    stage(overrides?: CallOverrides): Promise<BigNumber>;
 
     sell(
       returnAmount: PromiseOrValue<BigNumberish>,
@@ -981,6 +1173,11 @@ export interface FixedProductMarketMaker extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
+    transferOwnership(
+      newOwner: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
     calcBuyAmount(
       investmentAmount: PromiseOrValue<BigNumberish>,
       outcomeIndex: PromiseOrValue<BigNumberish>,
@@ -992,6 +1189,10 @@ export interface FixedProductMarketMaker extends BaseContract {
     supportsInterface(
       interfaceId: PromiseOrValue<BytesLike>,
       overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    resume(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
     approve(
@@ -1038,12 +1239,28 @@ export interface FixedProductMarketMaker extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
+    close(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
     conditionalTokens(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     balanceOf(
       account: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
+
+    renounceOwnership(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    pause(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    owner(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    isOwner(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     collectedFees(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
@@ -1069,6 +1286,8 @@ export interface FixedProductMarketMaker extends BaseContract {
       data: PromiseOrValue<BytesLike>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
+
+    stage(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     sell(
       returnAmount: PromiseOrValue<BigNumberish>,
@@ -1107,6 +1326,11 @@ export interface FixedProductMarketMaker extends BaseContract {
       id: PromiseOrValue<BigNumberish>,
       value: PromiseOrValue<BigNumberish>,
       data: PromiseOrValue<BytesLike>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    transferOwnership(
+      newOwner: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
