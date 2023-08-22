@@ -458,7 +458,7 @@ export class Market implements MarketInterface {
         outcomes: [Outcome, Outcome, Outcome],
         fee: BigNumber
     ): Promise<Market> {
-        const fpmmRepo: MarketMakerRepo = await MarketMakerRepo.initialize(
+        const fpmmRepo = await MarketMakerRepo.initialize(
             signer,
             marketMakerAddress,
             conditionalTokensAddress,
@@ -479,62 +479,81 @@ export class Market implements MarketInterface {
 }
 
 export class MarketAdmin {
-    //[LEM] pending methods
-    //pause
-    //resume
+    private readonly _signer: Signer;
+    private readonly _marketMaker: MarketMakerRepo;
+    private readonly _ctRepo: ConditionalTokensRepo;
+    private readonly questionId: string;
+
+    constructor(
+        signer: Signer,
+        marketMaker: MarketMakerRepo,
+        ctRepo: ConditionalTokensRepo,
+        questionId: string
+    ) {
+        this._signer = signer;
+        this._marketMaker = marketMaker;
+        this._ctRepo = ctRepo;
+        this.questionId = questionId;
+    }
+
+    /**
+     * sets the game state to PAUSED
+     * *** THE CALLER OF THIS FUNCTION MUST BE THE ADMIN ***
+     * @returns ContractTransaction object
+     */
+    pauseMarket = async (): Promise<ContractTransaction> => {
+        return this._marketMaker.pause();
+    };
+
+    /**
+     * sets the game state to RESUMED
+     * *** THE CALLER OF THIS FUNCTION MUST BE THE ADMIN ***
+     * @returns ContractTransaction object
+     */
+    resumeMarket = async (): Promise<ContractTransaction> => {
+        return this._marketMaker.resume();
+    };
 
     /**
      * Allows the liquidity provider (admin) to withdraw their fee after market is closed.
+     * @returns ContractTransaction object
+     */
+    withdrawLPFees = async (): Promise<ContractTransaction> => {
+        return this._marketMaker.withdrawFeeAmount();
+    };
+
+    /**
+     * Safely initializes the MarketAdmin class instance to be used by admins.
+     * Can only be used after createMarket was executed.
      * @param signer Signer to use to deploy market
      * @param marketMakerAddress Address of the deployed FixedProductMarketMaker contract
      * @param conditionalTokensAddress Address of the deployed ConditionalTokens contract
-     * @param collateralAddress Address of the collateral token contract
-     * @returns ContractTransaction object
+     * @param questionId questionId of the market
+     * @returns MarketAdmin object
      */
-    static async withdrawLPFees(
+    static async initialize(
         signer: Signer,
         marketMakerAddress: string,
         conditionalTokensAddress: string,
-        collateralAddress: string
-    ): Promise<ContractTransaction> {
-        const fpmmRepo: MarketMakerRepo = await MarketMakerRepo.initialize(
+        collateralAddress: string,
+        questionId: string
+    ): Promise<MarketAdmin> {
+        //[LEM] do admin check?
+
+        const fpmmRepo = await MarketMakerRepo.initialize(
             signer,
             marketMakerAddress,
             conditionalTokensAddress,
             collateralAddress
         );
+        const ctRepo = new ConditionalTokensRepo(signer, conditionalTokensAddress);
 
-        return fpmmRepo.withdrawFeeAmount();
+        return new MarketAdmin(signer, fpmmRepo, ctRepo, questionId);
     }
 
     /**
      * Creates a market and a market maker for the specified market details.
-     * @param signer Signer to use to deploy market
-     * @param conditionalTokensAddress Address of the deployed ConditionalTokens contract
-     * @param questionId questionId used to create the market
-     * @param payouts: payout vector to report winner (eg: [0,1,0])
-     * @returns ContractTransaction object
-     */
-    static async resolveMarket(
-        signer: Signer,
-        conditionalTokensAddress: string,
-        questionId: string,
-        payouts: number[]
-    ): Promise<ContractTransaction> {
-        try {
-            const ctRepo = new ConditionalTokensRepo(signer, conditionalTokensAddress);
-            let trx1 = await ctRepo.reportPayouts(questionId, payouts);
-            await trx1.wait();
-
-            console.log("[INFO] Market resolved with payouts: ", payouts);
-            return trx1;
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    /**
-     * Creates a market and a market maker for the specified market details.
+     * *** THE CREATOR OF THE MARKET IS THE ADMIN (OWNER)***
      * @param signer Signer to use to deploy market
      * @param collateralAddress Address of the collateral token contract
      * @param conditionalTokensAddress Address of the deployed ConditionalTokens contract
@@ -599,6 +618,30 @@ export class MarketAdmin {
             console.log("[INFO] Token position IDs: ", positionIds);
 
             return [conditionId, fpmmAddress, positionIds];
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Resolves the market with results.
+     * *** THE CALLER OF THIS FUNCTION MUST BE THE ORACLE ***
+     * @param payouts: payout vector to report winner (eg: [0,1,0])
+     * @returns ContractTransaction object
+     */
+    static async resolveMarket(
+        signer: Signer,
+        conditionalTokensAddress: string,
+        questionId: string,
+        payouts: number[]
+    ): Promise<ContractTransaction> {
+        try {
+            const ctRepo = new ConditionalTokensRepo(signer, conditionalTokensAddress);
+            let trx1 = await ctRepo.reportPayouts(questionId, payouts);
+            await trx1.wait();
+
+            console.log("[INFO] Market resolved with payouts: ", payouts);
+            return trx1;
         } catch (error) {
             throw error;
         }
